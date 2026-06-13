@@ -76,27 +76,31 @@ router.post("/login", async (req, res) => {
 });
 
 router.post("/register", async (req, res) => {
+ console.log("REGISTER BODY:", req.body);
   try {
-    const {
-      email,
-      password,
-      name,
-      phone,
-      whatsapp,
-      strong_areas,
-      signup_code,
-    } = req.body;
+   const {
+  email,
+  password,
+  name,
+  phone,
+  whatsapp,
+  strong_areas,
+  signup_code,
+  signupCode,
+  roleCode,
+} = req.body;
 
-    if (!email || !password || !name || !signup_code) {
-    return res.status(400).json({
+const finalSignupCode = signup_code || signupCode || roleCode;
+
+if (!email || !password || !name || !finalSignupCode) {
+return res.status(400).json({
         success: false,
         message:
         "Name, email, password and signup code are required",
       });
     }
 
-    const normalizedCode = signup_code.trim().toUpperCase();
-
+const normalizedCode = finalSignupCode.trim().toUpperCase();
     const codeResult = await pool.query(
       `SELECT * FROM signup_codes 
        WHERE code = $1 
@@ -113,9 +117,9 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    const signupCode = codeResult.rows[0];
+   const signupCodeRow = codeResult.rows[0];
 
-let roleToStore = signupCode.role;
+   let roleToStore = signupCodeRow.role;
 
 if (normalizedCode !== "ADMIN2026" && normalizedCode !== "USER2026") {
   return res.status(400).json({
@@ -165,7 +169,7 @@ if (normalizedCode === "USER2026") {
 
     await pool.query(
       "UPDATE signup_codes SET current_uses = current_uses + 1 WHERE id = $1",
-      [signupCode.id]
+      [signupCodeRow.id]
     );
 
     res.status(201).json({
