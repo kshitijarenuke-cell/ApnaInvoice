@@ -355,16 +355,18 @@ const signup = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name,
-        email,
-        password,
-        phone,
-        whatsapp,
-        strongAreas,
-        role: roleToStore,
-        designation,
-        companyName,
-      }),
+  name,
+  email: email.trim().toLowerCase(),
+  password,
+  phone,
+  whatsapp,
+  strongAreas,
+  role: roleToStore,
+  roleCode,
+  signupCode: roleCode,
+  designation,
+  companyName,
+}),
     });
 
     const data = await response.json();
