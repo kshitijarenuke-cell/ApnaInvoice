@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Settings,
   Plus,
@@ -29,6 +30,7 @@ import {
 } from '../services/invoiceSeedDefaultsService';
 
 const InvoiceSeedDefaultsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [presets, setPresets] = useState<InvoiceSeedDefaultsPreset[]>([]);
@@ -51,7 +53,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
       setPresets(data);
     } catch (error) {
       console.error('Error loading presets:', error);
-      toast.error('Failed to load presets');
+      toast.error(t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -59,44 +61,44 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
 
   const handleSavePreset = async () => {
     if (!presetName.trim()) {
-      toast.error('Please enter a preset name');
+      toast.error(t('settings.presetName'));
       return;
     }
 
     try {
       await savePreset(user!.id, presetName, editingConfig, editingPreset?.id);
-      toast.success(editingPreset ? 'Preset updated!' : 'Preset saved!');
+      toast.success(editingPreset ? t('common.success') : t('common.success'));
       await loadPresets();
       handleCancelEdit();
     } catch (error) {
       console.error('Error saving preset:', error);
-      toast.error('Failed to save preset');
+      toast.error(t('common.error'));
     }
   };
 
   const handleSetActive = async (presetId: string) => {
     try {
       await setActivePreset(user!.id, presetId);
-      toast.success('Active defaults updated!');
+      toast.success(t('common.success'));
       await loadPresets();
     } catch (error) {
       console.error('Error setting active preset:', error);
-      toast.error('Failed to set active preset');
+      toast.error(t('common.error'));
     }
   };
 
   const handleDelete = async (presetId: string) => {
-    if (!window.confirm('Are you sure you want to delete this preset?')) {
+    if (!window.confirm(t('common.confirm'))) {
       return;
     }
 
     try {
       await deletePreset(user!.id, presetId);
-      toast.success('Preset deleted!');
+      toast.success(t('invoices.deleted'));
       await loadPresets();
     } catch (error) {
       console.error('Error deleting preset:', error);
-      toast.error('Failed to delete preset');
+      toast.error(t('common.error'));
     }
   };
 
@@ -124,7 +126,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
   const handleResetToFactory = async () => {
     if (
       !window.confirm(
-        'This will create a new "Factory Defaults" preset and set it as active. Continue?'
+        t('settings.factoryDefaults')
       )
     ) {
       return;
@@ -132,11 +134,11 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
 
     try {
       await resetToFactoryDefaults(user!.id);
-      toast.success('Reset to factory defaults!');
+      toast.success(t('common.success'));
       await loadPresets();
     } catch (error) {
       console.error('Error resetting to factory:', error);
-      toast.error('Failed to reset to factory defaults');
+      toast.error(t('common.error'));
     }
   };
 
@@ -152,10 +154,10 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('Presets exported!');
+      toast.success(t('common.success'));
     } catch (error) {
       console.error('Error exporting presets:', error);
-      toast.error('Failed to export presets');
+      toast.error(t('common.error'));
     }
   };
 
@@ -166,11 +168,11 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
     try {
       const text = await file.text();
       const count = await importPresetsFromJSON(user!.id, text);
-      toast.success(`Imported ${count} preset(s)!`);
+      toast.success(t('common.success'));
       await loadPresets();
     } catch (error: any) {
       console.error('Error importing presets:', error);
-      toast.error(error.message || 'Failed to import presets');
+      toast.error(error.message || t('common.error'));
     }
     e.target.value = '';
   };
@@ -189,7 +191,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading seed defaults...</p>
+          <p className="text-gray-600 dark:text-gray-300">{t('settings.loading')}</p>
         </div>
       </div>
     );
@@ -209,9 +211,9 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
           </button>
          
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Invoice Seed Defaults</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('settings.title')}</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Manage invoice presets and default settings
+              {t('settings.subtitle')}
             </p>
           </div>
         </div>
@@ -227,7 +229,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
             />
             <div className="flex items-center space-x-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer transition-colors">
               <Upload className="h-4 w-4" />
-              <span>Import</span>
+              <span>{t('settings.import')}</span>
             </div>
           </label>
 
@@ -237,7 +239,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
             className="flex items-center space-x-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="h-4 w-4" />
-            <span>Export</span>
+            <span>{t('settings.export')}</span>
           </button>
 
           <button
@@ -245,7 +247,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
             className="flex items-center space-x-2 px-4 py-2 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
           >
             <RotateCcw className="h-4 w-4" />
-            <span>Factory Defaults</span>
+            <span>{t('settings.factoryDefaults')}</span>
           </button>
 
           <button
@@ -253,7 +255,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
             className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all shadow-lg"
           >
             <Plus className="h-4 w-4" />
-            <span>New Preset</span>
+            <span>{t('settings.newPreset')}</span>
           </button>
         </div>
       </div>
@@ -263,7 +265,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Settings className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <span className="text-blue-700 dark:text-blue-300 font-medium">
-              Active Defaults: {activePreset.name} ({activePreset.config.defaultCurrency}, Tax: {activePreset.config.defaultTaxRate}%)
+              {t('settings.activeDefaults')}: {activePreset.name} ({activePreset.config.defaultCurrency}, {t('settings.defaultTaxRate')}: {activePreset.config.defaultTaxRate}%)
             </span>
           </div>
         </div>
@@ -272,13 +274,13 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
       {showForm ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
-            {editingPreset ? 'Edit Preset' : 'New Preset'}
+            {editingPreset ? t('settings.editPreset') : t('settings.newPreset')}
           </h2>
 
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Preset Name *
+                {t('settings.presetName')}
               </label>
               <input
                 type="text"
@@ -292,7 +294,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Default Currency
+                  {t('settings.defaultCurrency')}
                 </label>
                 <select
                   value={editingConfig.defaultCurrency}
@@ -314,7 +316,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Default Tax Rate (%)
+                  {t('settings.defaultTaxRate')}
                 </label>
                 <input
                   type="number"
@@ -336,12 +338,12 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
 
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-4">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase">
-                Default Bill From
+                {t('settings.defaultBillFrom')}
               </h3>
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Company Name
+                    {t('settings.companyName')}
                   </label>
                   <input
                     type="text"
@@ -364,7 +366,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Email
+                      {t('settings.email')}
                     </label>
                     <input
                       type="email"
@@ -386,7 +388,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Phone
+                      {t('settings.phone')}
                     </label>
                     <input
                       type="tel"
@@ -409,7 +411,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Address
+                    {t('settings.address')}
                   </label>
                   <textarea
                     value={editingConfig.defaultBillFrom.address}
@@ -434,7 +436,7 @@ const InvoiceSeedDefaultsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Invoice Number Pattern
+                  {t('settings.invoiceNumberPattern')}
                 </label>
                 <input
                   type="text"
@@ -457,7 +459,7 @@ title="Invoice number pattern"
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Starting Counter
+                  {t('settings.startingCounter')}
                 </label>
                 <input
                   type="number"
@@ -491,7 +493,7 @@ title="Starting counter"
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="includeNotes" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Include Notes by Default
+                  {t('settings.includeNotes')}
                 </label>
               </div>
               {editingConfig.includeNotesByDefault && (
@@ -525,7 +527,7 @@ title="Starting counter"
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="includeTerms" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Include Terms & Conditions by Default
+                  {t('settings.includeTerms')}
                 </label>
               </div>
               {editingConfig.includeTermsByDefault && (
@@ -558,7 +560,7 @@ title="Starting counter"
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <label htmlFor="includeSignature" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Include Signature by Default
+                {t('settings.includeSignature')}
               </label>
             </div>
 
@@ -568,14 +570,14 @@ title="Starting counter"
                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all shadow-lg"
               >
                 <Save className="h-4 w-4" />
-                <span>{editingPreset ? 'Update Preset' : 'Save Preset'}</span>
+                <span>{editingPreset ? t('settings.updatePreset') : t('settings.savePreset')}</span>
               </button>
 
               <button
                 onClick={handleCancelEdit}
                 className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
-                Cancel
+                {t('settings.cancel')}
               </button>
             </div>
           </div>
@@ -599,16 +601,16 @@ title="Starting counter"
                   {preset.is_active && (
                     <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                       <Check className="h-3 w-3 mr-1" />
-                      Active
+                      {t('settings.active')}
                     </span>
                   )}
                 </div>
               </div>
 
               <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
-                <div>Currency: {preset.config.defaultCurrency}</div>
-                <div>Tax Rate: {preset.config.defaultTaxRate}%</div>
-                <div>Pattern: {preset.config.invoiceNumberPattern}</div>
+                <div>{t('settings.defaultCurrency')}: {preset.config.defaultCurrency}</div>
+                <div>{t('settings.defaultTaxRate')}: {preset.config.defaultTaxRate}%</div>
+                <div>{t('settings.invoiceNumberPattern')}: {preset.config.invoiceNumberPattern}</div>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -618,7 +620,7 @@ title="Starting counter"
                     className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors text-sm"
                   >
                     <Check className="h-3 w-3" />
-                    <span>Apply</span>
+                    <span>{t('settings.apply')}</span>
                   </button>
                 )}
 
@@ -627,13 +629,13 @@ title="Starting counter"
                   className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
                 >
                   <Edit2 className="h-3 w-3" />
-                  <span>Edit</span>
+                  <span>{t('settings.edit')}</span>
                 </button>
 
                 <button
                   onClick={() => handleDuplicate(preset)}
                   className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  title="Duplicate"
+                  title={t('settings.duplicate')}
                 >
                   <Copy className="h-3 w-3" />
                 </button>
@@ -642,7 +644,7 @@ title="Starting counter"
                   onClick={() => handleDelete(preset.id)}
                   disabled={preset.is_active}
                   className="p-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Delete"
+                  title={t('settings.delete')}
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>
@@ -653,13 +655,13 @@ title="Starting counter"
           {presets.length === 0 && (
             <div className="col-span-full text-center py-12">
               <Settings className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4">No presets yet</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">{t('settings.noPresetsMessage')}</p>
               <button
                 onClick={handleNewPreset}
                 className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all shadow-lg"
               >
                 <Plus className="h-4 w-4" />
-                <span>Create Your First Preset</span>
+                <span>{t('settings.createYourFirstPreset')}</span>
               </button>
             </div>
           )}

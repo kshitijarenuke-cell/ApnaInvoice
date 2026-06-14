@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useInvoiceRole } from '../contexts/InvoiceRoleContext';
 import TabbedRightPane from '../components/invoices/TabbedRightPane';
 
 const InvoicesPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { invoiceRole, isUser, setInvoiceRole } = useInvoiceRole();
 
@@ -29,7 +31,7 @@ const InvoicesPage: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-between flex-shrink-0 rounded-t-xl shadow-sm">
         <div className="flex items-center space-x-4">
           <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            {isUser ? 'Invoices' : 'Invoice Creator'}
+            {isUser ? t('dashboard.invoices') : t('dashboard.invoiceCreator')}
           </h1>
     
         </div>
