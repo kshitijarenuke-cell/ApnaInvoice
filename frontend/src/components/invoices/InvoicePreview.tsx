@@ -132,7 +132,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
        <div
   ref={invoiceRef}
   id="invoice-preview"
-  className="relative max-w-4xl mx-auto bg-white shadow-2xl w-[210mm] min-h-[297mm]"
+  className="relative max-w-7xl mx-auto bg-white shadow-2xl w-full min-h-[297mm]"
 >
   {isProvider && (
     <button
@@ -144,7 +144,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
 <span>Edit</span>   
  </button>
   )}
-          <div className="px-12 py-8 flex items-center justify-between bg-[#0B2D5B]">
+          <div className="px-12 py-4 flex items-center justify-between bg-[#0B2D5B]">
             <div className="flex-shrink-0">
               <h1 className="leading-none mb-4 text-[#F2C01A] text-[48px] font-bold tracking-[0.05em]">
                 INVOICE
@@ -234,7 +234,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
 
           <div className="bg-[#6FE9E8] h-[8px]" />
 
-          <div className="px-12 py-8 grid grid-cols-2 gap-12">
+          <div className="px-8 py-4 grid grid-cols-2 gap-12">
             <div>
               <h3 className="mb-3 uppercase text-[#0B2D5B] text-[14px] font-bold tracking-[0.05em]">
                 Bill To:

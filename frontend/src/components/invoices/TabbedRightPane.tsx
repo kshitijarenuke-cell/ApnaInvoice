@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { FileText, List } from 'lucide-react';
 import InvoicePreview from './InvoicePreview';
 import InvoiceRecords from './InvoiceRecords';
-import InvoiceEditor from './InvoiceEditor';
 
 interface TabbedRightPaneProps {
   refreshTrigger?: number;
@@ -47,18 +46,12 @@ const TabbedRightPane: React.FC<TabbedRightPaneProps> = ({ refreshTrigger }) => 
 
       <div className="flex-1 overflow-auto">
         {activeTab === 'preview' ? (
-          <div className="p-6">
-            <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-6 items-start">
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
-                <InvoiceEditor />
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
-                <InvoicePreview />
-              </div>
-            </div>
-          </div>
-        ) : (
+  <div className="p-6">
+    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+      <InvoicePreview />
+    </div>
+  </div>
+) : (
           <InvoiceRecords refreshTrigger={refreshTrigger} onSwitchToPreview={handleSwitchToPreview} />
         )}
       </div>
