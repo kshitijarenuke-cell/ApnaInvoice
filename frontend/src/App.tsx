@@ -9,6 +9,7 @@ import { InvoiceRoleProvider } from './contexts/InvoiceRoleContext';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import LanguageSelectionPage from './pages/LanguageSelectionPage';
 import InvoicesPage from './pages/InvoicesPage';
 import InvoiceSeedDefaultsPage from './pages/InvoiceSeedDefaultsPage';
 
@@ -17,9 +18,11 @@ import ProtectedRoute from './components/ProtectedRoute';
 import InvoiceRouteGuard from './components/invoices/InvoiceRouteGuard';
 
 import { useAuth } from './hooks/useAuth';
+import { useLanguage } from './hooks/useLanguage';
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const { isLanguageSelected } = useLanguage();
 
   if (loading) {
     return (
@@ -29,6 +32,16 @@ function AppContent() {
           <p className="text-gray-600 dark:text-gray-300">Loading application...</p>
         </div>
       </div>
+    );
+  }
+  
+  if (!isLanguageSelected) {
+    return (
+      <Router>
+        <Routes>
+          <Route path="*" element={<LanguageSelectionPage />} />
+        </Routes>
+      </Router>
     );
   }
 
