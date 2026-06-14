@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 const SignupPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -16,16 +17,17 @@ const SignupPage: React.FC = () => {
 
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!name.trim()) return setError('Please enter your full name');
-    if (!email.trim()) return setError('Please enter your email');
-    if (!signupCode.trim()) return setError('Please enter signup code');
-    if (password !== confirmPassword) return setError('Passwords do not match');
-    if (password.length < 6) return setError('Password must be at least 6 characters');
+    if (!name.trim()) return setError(t('auth.signup.enterName'));
+    if (!email.trim()) return setError(t('auth.signup.enterEmail'));
+    if (!signupCode.trim()) return setError(t('auth.signup.enterCode'));
+    if (password !== confirmPassword) return setError(t('auth.signup.passwordMismatch'));
+    if (password.length < 6) return setError(t('auth.signup.passwordLength'));
 
     setLoading(true);
 
@@ -43,10 +45,10 @@ const SignupPage: React.FC = () => {
       if (success) {
         navigate('/dashboard');
       } else {
-        setError('Signup failed');
+        setError(t('auth.signup.signupFailed'));
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.');
+      setError(err.message || t('auth.errors.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -71,7 +73,7 @@ const SignupPage: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Create your account
+              {t('auth.signup.title')}
             </h2>
           </div>
 
@@ -85,7 +87,7 @@ const SignupPage: React.FC = () => {
 
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Full Name
+                {t('auth.signup.fullName')}
               </label>
               <input
                 type="text"
@@ -93,14 +95,14 @@ const SignupPage: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                placeholder="Enter your full name"
+                placeholder={t('auth.signup.fullName')}
                 required
               />
             </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
+                {t('auth.signup.email')}
               </label>
               <input
                 type="email"
@@ -108,14 +110,14 @@ const SignupPage: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                placeholder="Enter your email"
+                placeholder={t('auth.signup.email')}
                 required
               />
             </div>
 
             <div>
               <label htmlFor="signupCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Signup Code
+                {t('auth.signup.signupCode')}
               </label>
               <input
                 type="text"
@@ -130,7 +132,7 @@ const SignupPage: React.FC = () => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Password
+                {t('auth.signup.password')}
               </label>
               <div className="relative">
                 <input
@@ -139,7 +141,7 @@ const SignupPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 pr-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="At least 6 characters"
+                  placeholder={t('auth.signup.password')}
                   required
                 />
                 <button
@@ -154,7 +156,7 @@ const SignupPage: React.FC = () => {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Confirm Password
+                {t('auth.signup.confirmPassword')}
               </label>
               <div className="relative">
                 <input
@@ -163,7 +165,7 @@ const SignupPage: React.FC = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 pr-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="Confirm your password"
+                  placeholder={t('auth.signup.confirmPassword')}
                   required
                 />
                 <button
@@ -181,18 +183,18 @@ const SignupPage: React.FC = () => {
               disabled={loading}
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? t('auth.signup.loading') : t('auth.signup.signupButton')}
             </button>
           </form>
 
           <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Already have an account?{' '}
+              {t('auth.signup.haveAccount')}{' '}
               <Link
                 to="/login"
                 className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-semibold"
               >
-                Sign in
+                {t('auth.signup.loginLink')}
               </Link>
             </p>
           </div>

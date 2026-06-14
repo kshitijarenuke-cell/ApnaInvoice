@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   LogOut,
   Bell,
@@ -19,6 +20,7 @@ import EditProfileModal from './EditProfileModal';
 import NotificationPanel from './NotificationPanel';
 
 const Layout: React.FC = () => {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const { unreadCount } = useNotifications();
@@ -32,9 +34,9 @@ const Layout: React.FC = () => {
   const profileRef = useRef<HTMLDivElement>(null);
 
   const menuItems = [
-    { label: 'Invoices', path: '/admin/invoices', icon: Receipt },
+    { label: t('dashboard.invoices'), path: '/admin/invoices', icon: Receipt },
     ...(user?.role === 'admin'
-      ? [{ label: 'Invoice Settings', path: '/admin/invoices/settings', icon: Settings }]
+      ? [{ label: t('dashboard.invoiceSettings'), path: '/admin/invoices/settings', icon: Settings }]
       : []),
   ];
 
@@ -106,7 +108,7 @@ const Layout: React.FC = () => {
               className="min-w-max md:w-full flex items-center justify-center md:justify-start space-x-2 md:space-x-3 px-3 md:px-4 py-2 md:py-3 rounded-lg text-red-500 hover:bg-red-900/20 transition-colors"
             >
               <LogOut className="h-5 w-5" />
-              <span className="text-xs md:text-sm font-medium">Logout</span>
+              <span className="text-xs md:text-sm font-medium">{t('dashboard.logout')}</span>
             </button>
           </nav>
         </aside>
@@ -179,7 +181,7 @@ const Layout: React.FC = () => {
                       className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       <Edit className="h-4 w-4" />
-                      <span className="text-sm">Edit Profile</span>
+                      <span className="text-sm">{t('dashboard.editProfile')}</span>
                     </button>
 
                     <button
@@ -187,7 +189,7 @@ const Layout: React.FC = () => {
                       className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span className="text-sm">Logout</span>
+                      <span className="text-sm">{t('dashboard.logout')}</span>
                     </button>
                   </div>
                 </div>

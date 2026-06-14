@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -12,6 +13,7 @@ const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   const successMessage = location.state?.message;
   const messageType = location.state?.type;
@@ -23,14 +25,14 @@ const LoginPage: React.FC = () => {
 
     try {
       const result = await login(email, password);
-
+      //test comment
       if (result.success) {
         navigate('/dashboard');
       } else {
-        setError(result.error || 'Login failed. Please try again.');
+        setError(result.error || t('auth.errors.serverError'));
       }
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred. Please try again.');
+      setError(err.message || t('auth.errors.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -56,7 +58,7 @@ const LoginPage: React.FC = () => {
         {/* Welcome Text - Centered */}
         <div className="text-center mb-8">
           <h2 className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
-            Welcome
+            {t('auth.login.title')}
           </h2>
         </div>
 
@@ -83,7 +85,7 @@ const LoginPage: React.FC = () => {
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
+                {t('auth.login.email')}
               </label>
               <input
                 type="email"
@@ -91,7 +93,7 @@ const LoginPage: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                placeholder="Enter your email"
+                placeholder={t('auth.login.email')}
                 required
               />
             </div>
@@ -99,7 +101,7 @@ const LoginPage: React.FC = () => {
             {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Password
+                {t('auth.login.password')}
               </label>
               <div className="relative">
                 <input
@@ -108,7 +110,7 @@ const LoginPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors pr-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="Enter your password"
+                  placeholder={t('auth.login.password')}
                   required
                 />
                 <button
@@ -125,7 +127,7 @@ const LoginPage: React.FC = () => {
          <Link
              to="/forgot-password"
             className="text-sm text-purple-400 hover:text-purple-300" >
-             Forgot Password?
+             {t('auth.login.forgotPassword')}
          </Link>
       </div>
 
@@ -135,19 +137,19 @@ const LoginPage: React.FC = () => {
               disabled={loading}
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-lg font-semibold focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? t('auth.login.loading') : t('auth.login.loginButton')}
             </button>
           </form>
 
           {/* Sign Up Link */}
           <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Don't have an account?{' '}
+              {t('auth.login.noAccount')}{' '}
               <Link
                 to="/signup"
                 className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-semibold transition-colors"
               >
-                Sign up
+                {t('auth.login.signupLink')}
               </Link>
             </p>
           </div>
