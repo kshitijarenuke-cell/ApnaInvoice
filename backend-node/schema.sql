@@ -295,5 +295,10 @@ CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_meeting_notes_project_id ON meeting_notes(project_id);
 CREATE INDEX IF NOT EXISTS idx_file_attachments_project_id ON file_attachments(project_id);
 
-
-
+CREATE TABLE invoice_pdfs (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    invoice_id uuid REFERENCES invoices(id) ON DELETE CASCADE,
+    file_name text NOT NULL,
+    generated_at timestamptz DEFAULT now(),
+    created_by uuid REFERENCES user_profiles(id)
+);

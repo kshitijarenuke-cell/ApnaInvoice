@@ -41,6 +41,40 @@ router.get("/", authMiddleware, async (req, res) => {
     });
   }
 });
+router.post("/:id/pdf", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { file_name } = req.body;
+
+    if (!file_name) {
+      return res.status(400).json({
+        success: false,
+        message: "PDF file name is required",
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO invoice_pdfs
+       (invoice_id, file_name, created_by)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [id, file_name, req.user.id]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "PDF metadata saved successfully",
+      pdf: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Save PDF metadata error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to save PDF metadata",
+      error: error.message,
+    });
+  }
+});
 
 router.get("/:id", authMiddleware, async (req, res) => {
   try {

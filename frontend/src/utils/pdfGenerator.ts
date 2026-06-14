@@ -2,9 +2,10 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 interface GeneratePDFOptions {
-  invoiceNumber: string;
-  clientName: string;
-  currency: string;
+  invoiceId:string;
+  invoiceNumber:string;
+  clientName:string;
+  currency:string;
 }
 
 async function loadImageAsBase64(url: string): Promise<string> {
@@ -24,7 +25,8 @@ async function loadImageAsBase64(url: string): Promise<string> {
 }
 
 export async function generateInvoicePDF(options: GeneratePDFOptions): Promise<void> {
-  const { invoiceNumber, clientName, currency } = options;
+const { invoiceId, invoiceNumber, clientName, currency } = options;
+const token = localStorage.getItem('token');
 
   const invoiceElement = document.getElementById('invoice-preview');
   if (!invoiceElement) {
@@ -102,5 +104,20 @@ export async function generateInvoicePDF(options: GeneratePDFOptions): Promise<v
   const filename = `${invoiceNumber}-${safeClientName}-${currency}.pdf`;
 
   // Download
-  pdf.save(filename);
+// Save PDF metadata in database
+if (invoiceId && token) {
+  await fetch(`http://localhost:5001/api/invoices/${invoiceId}/pdf`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      file_name: filename,
+    }),
+  });
 }
+
+// Download PDF
+pdf.save(filename);
+}   
