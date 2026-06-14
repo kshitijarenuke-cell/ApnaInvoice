@@ -76,69 +76,50 @@ router.post("/login", async (req, res) => {
 });
 
 router.post("/register", async (req, res) => {
- console.log("REGISTER BODY:", req.body);
   try {
-   const {
-  email,
-  password,
-  name,
-  phone,
-  whatsapp,
-  strong_areas,
-  signup_code,
-  signupCode,
-  roleCode,
-} = req.body;
+    console.log("REGISTER BODY:", req.body);
 
-const finalSignupCode = signup_code || signupCode || roleCode;
+    const {
+      email,
+      password,
+      name,
+      phone,
+      whatsapp,
+      strong_areas,
+      strongAreas,
+      signup_code,
+      signupCode,
+      roleCode,
+    } = req.body;
 
-if (!email || !password || !name || !finalSignupCode) {
-return res.status(400).json({
-        success: false,
-        message:
-        "Name, email, password and signup code are required",
-      });
-    }
+    const finalSignupCode = signup_code || signupCode || roleCode;
 
-const normalizedCode = finalSignupCode.trim().toUpperCase();
-    const codeResult = await pool.query(
-      `SELECT * FROM signup_codes 
-       WHERE code = $1 
-       AND is_active = true 
-       AND (expires_at IS NULL OR expires_at > NOW())
-       AND (max_uses IS NULL OR current_uses < max_uses)`,
-      [normalizedCode]
-    );
-
-    if (codeResult.rows.length === 0) {
+    if (!email || !password || !name || !finalSignupCode) {
       return res.status(400).json({
         success: false,
-        message: "Invalid or expired signup code",
+        message: "Name, email, password and signup code are required",
       });
     }
 
-   const signupCodeRow = codeResult.rows[0];
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCode = finalSignupCode.trim().toUpperCase();
 
-   let roleToStore = signupCodeRow.role;
+    let roleToStore;
 
-if (normalizedCode !== "ADMIN2026" && normalizedCode !== "USER2026") {
-  return res.status(400).json({
-    success: false,
-    message: "Only ADMIN2026 or USER2026 signup code is allowed",
-  });
-}
-
-if (normalizedCode === "ADMIN2026") {
-  roleToStore = "admin";
-}
-
-if (normalizedCode === "USER2026") {
-  roleToStore = "user";
-}
+    if (normalizedCode === "ADMIN2026") {
+      roleToStore = "admin";
+    } else if (normalizedCode === "USER2026") {
+      roleToStore = "user";
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid signup code",
+      });
+    }
 
     const existingUser = await pool.query(
       "SELECT id FROM user_profiles WHERE email = $1",
-      [email]
+      [normalizedEmail]
     );
 
     if (existingUser.rows.length > 0) {
@@ -156,33 +137,43 @@ if (normalizedCode === "USER2026") {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        RETURNING id, email, name, phone, whatsapp, strong_areas, role, designation, company_name, created_at, updated_at`,
       [
-        email.trim().toLowerCase(),
+        normalizedEmail,
         hashedPassword,
-        name || "User",
+        name,
         phone || null,
         whatsapp || null,
-        strong_areas || null,
+        strong_areas || strongAreas || null,
         roleToStore,
-       roleToStore === "admin" ? "Admin" : "User",null,
+        roleToStore === "admin" ? "Admin" : "User",
+        null,
       ]
     );
 
-    await pool.query(
-      "UPDATE signup_codes SET current_uses = current_uses + 1 WHERE id = $1",
-      [signupCodeRow.id]
+    const newUser = userResult.rows[0];
+
+    const token = jwt.sign(
+      {
+        id: newUser.id,
+        email: newUser.email,
+        role: newUser.role,
+      },
+      process.env.JWT_SECRET || "dev_secret",
+      { expiresIn: "7d" }
     );
 
     res.status(201).json({
       success: true,
       message: "Registration successful",
-      user: userResult.rows[0],
+      token,
+      user: newUser,
     });
   } catch (error) {
-    console.error("Register error:", error.message);
+    console.error("Register full error:", error);
+
     res.status(500).json({
       success: false,
       message: "Registration failed",
-      error: error.message,
+      error: error.message || String(error),
     });
   }
 });
