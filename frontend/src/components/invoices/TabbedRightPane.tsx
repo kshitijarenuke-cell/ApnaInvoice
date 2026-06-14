@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, List } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import InvoicePreview from './InvoicePreview';
 import InvoiceRecords from './InvoiceRecords';
 
@@ -8,6 +9,7 @@ interface TabbedRightPaneProps {
 }
 
 const TabbedRightPane: React.FC<TabbedRightPaneProps> = ({ refreshTrigger }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'preview' | 'records'>('preview');
 
   const handleSwitchToPreview = () => {
@@ -27,7 +29,7 @@ const TabbedRightPane: React.FC<TabbedRightPaneProps> = ({ refreshTrigger }) => 
             }`}
           >
             <FileText className="h-4 w-4" />
-            <span>Preview</span>
+            <span>{t('invoices.preview')}</span>
           </button>
 
           <button
@@ -39,7 +41,7 @@ const TabbedRightPane: React.FC<TabbedRightPaneProps> = ({ refreshTrigger }) => 
             }`}
           >
             <List className="h-4 w-4" />
-            <span>Invoice Records</span>
+            <span>{t('invoices.records')}</span>
           </button>
         </div>
       </div>
