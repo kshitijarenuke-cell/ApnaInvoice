@@ -3,7 +3,6 @@ import { Plus, Trash2, RotateCcw, Copy, FileText, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInvoiceStore } from '../../store/invoiceStore';
 import { useAuth } from '../../hooks/useAuth';
-import { useInvoiceRole } from '../../contexts/InvoiceRoleContext';
 import { getCurrencySymbol, formatCurrency } from '../../utils/currencyFormatter';
 
 interface InvoiceEditorProps {
@@ -13,7 +12,6 @@ interface InvoiceEditorProps {
 const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ onSaved }) => {
   const store = useInvoiceStore();
   const { user } = useAuth();
-  const { isProvider } = useInvoiceRole();
   const [isSaving, setIsSaving] = useState(false);
 
  useEffect(() => {
@@ -50,10 +48,7 @@ const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ onSaved }) => {
       return;
     }
 
-    if (!isProvider) {
-      toast.error('You do not have permission to save invoices. Please login as Provider.', { id: 'save-invoice' });
-      return;
-    }
+    // permission checks removed; allow authenticated users to save invoices
 
     if (!store.billTo.name || store.lineItems.length === 0) {
       toast.error('Please fill in client name and add at least one line item.', { id: 'save-invoice' });

@@ -39,11 +39,9 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
       setLoading(true);
       setError(null);
 
-      const invoiceRole = sessionStorage.getItem('invoice_role');
       const data = await fetchUserInvoices(
         user.id,
-        user.email,
-        invoiceRole === 'user' ? 'user' : undefined
+        user.email
       );
 
       setInvoices(data);
@@ -72,7 +70,7 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
     try {
       toast.loading(t('invoices.loadingInvoice'), { id: 'load-invoice' });
 
-      const fullInvoice = await fetchInvoiceById(invoice.id, user.id, user.email);
+      const fullInvoice = await fetchInvoiceById(invoice.id, user.id, user.email, undefined);
       loadInvoice(fullInvoice);
 
       toast.success(t('common.success'), { id: 'load-invoice' });
@@ -96,13 +94,10 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
     try {
       toast.loading(t('invoices.loadingInvoice'), { id: 'edit-invoice' });
 
-      const invoiceRole = sessionStorage.getItem('invoice_role');
-
       const fullInvoice = await fetchInvoiceById(
         invoice.id,
         user.id,
-        user.email,
-        invoiceRole === 'user' ? 'user' : undefined
+        user.email
       );
 
       loadInvoice(fullInvoice);
@@ -128,13 +123,10 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
     try {
       toast.loading(t('invoices.loadingInvoice'), { id: 'download-pdf' });
 
-      const invoiceRole = sessionStorage.getItem('invoice_role');
-
       const fullInvoice = await fetchInvoiceById(
         invoice.id,
         user.id,
-        user.email,
-        invoiceRole === 'user' ? 'user' : undefined
+        user.email
       );
 
       loadInvoice(fullInvoice);

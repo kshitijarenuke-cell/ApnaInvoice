@@ -6,7 +6,6 @@ import { useInvoiceStore } from '../../store/invoiceStore';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { generateInvoicePDF } from '../../utils/pdfGenerator';
 import { useAuth } from '../../hooks/useAuth';
-import { useInvoiceRole } from '../../contexts/InvoiceRoleContext';
 import dayjs from 'dayjs';
 
 interface InvoicePreviewProps {
@@ -19,7 +18,6 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
   const calculations = store.getCalculations();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
-  const { isProvider } = useInvoiceRole();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -53,13 +51,6 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
   const handleSaveInvoice = async () => {
     if (!user) {
       toast.error(t('common.error'), { id: 'save-invoice' });
-      return;
-    }
-
-    if (!isProvider) {
-      toast.error(t('common.error'), {
-        id: 'save-invoice',
-      });
       return;
     }
 
@@ -136,16 +127,14 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
   id="invoice-preview"
   className="relative max-w-4xl mx-auto bg-white shadow-2xl w-[210mm] min-h-[297mm]"
 >
-  {isProvider && (
-    <button
-      type="button"
-      onClick={() => setIsEditing(true)}
-      className="absolute top-4 right-4 z-20 inline-flex items-center space-x-2 px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium shadow"
-    >
-      <Edit className="h-4 w-4" />
-<span>{t('common.edit')}</span>   
- </button>
-  )}
+  <button
+    type="button"
+    onClick={() => setIsEditing(true)}
+    className="absolute top-4 right-4 z-20 inline-flex items-center space-x-2 px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium shadow"
+  >
+    <Edit className="h-4 w-4" />
+    <span>{t('common.edit')}</span>   
+  </button>
           <div className="px-12 py-8 flex items-center justify-between bg-[#0B2D5B]">
             <div className="flex-shrink-0">
               <h1 className="leading-none mb-4 text-[#F2C01A] text-[48px] font-bold tracking-[0.05em]">
@@ -588,39 +577,36 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
           </div>
         </div>
 
-        {isProvider && (
-          <div className="max-w-4xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 ">
+        <div className="max-w-4xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 ">
+          <button
+            type="button"
+            onClick={handleSaveInvoice}
+            disabled={isSaving}
+            className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium"
+          >
+            <Save className="h-4 w-4" />
+            <span>{isSaving ? t('invoices.saving') : t('invoices.saveInvoice')}</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={handleSaveInvoice}
-              disabled={isSaving}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium"
-            >
-              <Save className="h-4 w-4" />
-              <span>{isSaving ? t('invoices.saving') : t('invoices.saveInvoice')}</span>
-            </button>
+          <button
+            type="button"
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
+            className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium"
+          >
+            <Download className="h-4 w-4" />
+            <span>{isDownloading ? t('invoices.downloadingPDF') : t('invoices.downloadPDF')}</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={handleDownloadPDF}
-              disabled={isDownloading}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium"
-            >
-              <Download className="h-4 w-4" />
-              <span>{isDownloading ? t('invoices.downloadingPDF') : t('invoices.downloadPDF')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleNewInvoice}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-medium"
-            >
-              <RotateCcw className="h-4 w-4" />
-              <span>{t('invoices.newInvoice')}</span>
-            </button>
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={handleNewInvoice}
+            className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-medium"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span>{t('invoices.newInvoice')}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

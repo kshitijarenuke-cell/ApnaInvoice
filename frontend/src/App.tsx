@@ -4,7 +4,6 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { InvoiceRoleProvider } from './contexts/InvoiceRoleContext';
 
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -69,7 +68,7 @@ function AppContent() {
             path="admin/invoices/settings"
             element={
               <ProtectedRoute requiredRole={['admin']}>
-                <InvoiceRouteGuard requireProvider>
+                <InvoiceRouteGuard>
                   <InvoiceSeedDefaultsPage />
                 </InvoiceRouteGuard>
               </ProtectedRoute>
@@ -88,10 +87,8 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <NotificationProvider>
-          <InvoiceRoleProvider>
-            <AppContent />
-            <Toaster position="top-right" richColors />
-          </InvoiceRoleProvider>
+          <AppContent />
+          <Toaster position="top-right" richColors />
         </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
