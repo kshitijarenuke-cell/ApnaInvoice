@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-const API_URL = 'http://localhost:5001/api';
+import { API_URL } from '../utils/api';
 
 export type UserRole =
   | 'admin'
@@ -349,7 +349,7 @@ const signup = async (
       : designation === 'Customer' ? 'user'
       : role;
 
-    const response = await fetch("http://localhost:5001/api/auth/register", {
+    const response = await fetch(`${API_URL}/auth/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

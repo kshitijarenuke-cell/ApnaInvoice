@@ -7,7 +7,7 @@ export interface SaveInvoiceResult {
   error?: string;
 }
 
-const API_URL = 'http://localhost:5001/api';
+import { API_URL } from '../utils/api';
 
 function getToken() {
   return localStorage.getItem('token');

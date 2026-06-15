@@ -51,7 +51,7 @@ export interface FullInvoice {
   lineItems: InvoiceLineItem[];
 }
 
-const API_URL = "http://localhost:5001/api";
+import { API_URL } from '../utils/api';
 
 function getToken() {
   return localStorage.getItem("token");
