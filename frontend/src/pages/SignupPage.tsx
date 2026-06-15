@@ -1,57 +1,102 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { API_URL } from '../utils/api';
 
 const SignupPage: React.FC = () => {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [signupCode, setSignupCode] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [pendingToken, setPendingToken] = useState('');
+  const [sent, setSent] = useState(false);
+  const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const { signup } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [toast, setToast] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const sendOtp = async () => {
+    if (!phone.trim()) return setError('Enter phone');
     setError('');
-
-    if (!name.trim()) return setError(t('auth.signup.enterName'));
-    if (!email.trim()) return setError(t('auth.signup.enterEmail'));
-    if (!signupCode.trim()) return setError(t('auth.signup.enterCode'));
-    if (password !== confirmPassword) return setError(t('auth.signup.passwordMismatch'));
-    if (password.length < 6) return setError(t('auth.signup.passwordLength'));
-
     setLoading(true);
-
     try {
-     const success = await signup(
-  email.trim(),
-  password,
-  name.trim(),
-  '',
-  '',
-  '',
-  signupCode.trim() === 'ADMIN2026' ? 'admin' : 'user',
-  signupCode.trim()
-);
-      if (success) {
-        navigate('/dashboard');
-      } else {
-        setError(t('auth.signup.signupFailed'));
+      const res = await fetch(`${API_URL}/auth/signup-send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Failed to send OTP');
+        setLoading(false);
+        return;
       }
-    } catch (err: any) {
-      setError(err.message || t('auth.errors.unexpectedError'));
+      setPendingToken(data.pendingToken);
+      sessionStorage.setItem('pending_token', data.pendingToken);
+      sessionStorage.setItem('pending_masked_phone', data.maskedPhone || '');
+      setSent(true);
+      setToast(`OTP sent to ${data.maskedPhone || phone}`);
+      setTimeout(() => setToast(''), 3000);
+    } catch (e: any) {
+      setError(e.message || 'Failed to send OTP');
     } finally {
       setLoading(false);
     }
+  };
+
+  const resendOtp = async () => {
+    if (!sessionStorage.getItem('pending_token')) return setError('No pending request');
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_URL}/auth/resend-otp`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ pendingToken: sessionStorage.getItem('pending_token') }) });
+      const d = await res.json();
+      if (!res.ok) { setError(d.message || 'Resend failed'); return; }
+      setToast('OTP resent');
+      setTimeout(() => setToast(''), 3000);
+    } catch (e:any) { setError(e.message || 'Resend failed'); }
+    finally { setLoading(false); }
+  };
+
+  const verifyOtp = async () => {
+    if (!otp.trim() || !(pendingToken || sessionStorage.getItem('pending_token'))) return setError('Enter OTP');
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_URL}/auth/verify-otp`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ pendingToken: pendingToken || sessionStorage.getItem('pending_token'), otp: otp.trim() }) });
+      const d = await res.json();
+      if (!res.ok) { setError(d.message || 'Verification failed'); return; }
+      // store token if returned
+      if (d.token) {
+        localStorage.setItem('token', d.token);
+        localStorage.setItem('user', JSON.stringify(d.user || {}));
+      }
+      setVerified(true);
+      setToast('Phone verified');
+      setTimeout(() => setToast(''), 3000);
+    } catch (e:any) { setError(e.message || 'Verification failed'); }
+    finally { setLoading(false); }
+  };
+
+  const createAccount = async () => {
+    if (!verified) return setError('Please verify phone first');
+    // If verify-otp already returned token/user we can navigate
+    setLoading(true); setError('');
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        navigate('/admin/invoices');
+        return;
+      }
+      // Fallback: call register endpoint (if backend supports name+phone)
+      const res = await fetch(`${API_URL}/auth/register`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name: name.trim(), phone: phone.trim() }) });
+      const d = await res.json();
+      if (!res.ok) { setError(d.message || 'Create account failed'); return; }
+      if (d.token) { localStorage.setItem('token', d.token); localStorage.setItem('user', JSON.stringify(d.user || {})); }
+      navigate('/admin/invoices');
+    } catch (e:any) { setError(e.message || 'Create account failed'); }
+    finally { setLoading(false); }
   };
 
   return (
@@ -59,144 +104,55 @@ const SignupPage: React.FC = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-4 overflow-hidden">
-            <img
-              src="/Real_Logo_V1.png.jpeg"
-              alt="Apna Invoice Logo"
-              className="w-full h-full object-contain"
-            />
+            <img src="/Real_Logo_V1.png.jpeg" alt="Apna Invoice Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            Apna Invoice
-          </h1>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Apna Invoice</h1>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {t('auth.signup.title')}
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('auth.signup.title')}</h2>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-5">
             {error && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center space-x-2">
                 <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
                 <span className="text-red-700 dark:text-red-400 text-sm">{error}</span>
               </div>
             )}
+            {toast && (
+              <div className="fixed right-4 top-4 z-50 bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>
+            )}
 
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('auth.signup.fullName')}
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                placeholder={t('auth.signup.fullName')}
-                required
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.signup.fullName')}</label>
+              <input type="text" value={name} onChange={(e)=>setName(e.target.value)} className="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900" placeholder={t('auth.signup.fullName') || 'Full name'} />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('auth.signup.email')}
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                placeholder={t('auth.signup.email')}
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="signupCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('auth.signup.signupCode')}
-              </label>
-              <input
-                type="text"
-                id="signupCode"
-                value={signupCode}
-                onChange={(e) => setSignupCode(e.target.value.toUpperCase())}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                placeholder="ADMIN2026 or USER2026"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('auth.signup.password')}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 pr-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder={t('auth.signup.password')}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mobile Number</label>
+              <input type="tel" value={phone} onChange={(e)=>setPhone(e.target.value)} onBlur={()=>{ if(phone.trim() && !sent) sendOtp(); }} className="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900" placeholder="e.g. +919876543210" />
+              <div className="mt-2 flex items-center justify-between">
+                <button type="button" onClick={sendOtp} disabled={loading || !phone.trim()} className="text-sm text-blue-600">Verify</button>
+                {sent && <button type="button" onClick={resendOtp} disabled={loading} className="text-sm text-blue-600">Resend OTP</button>}
               </div>
             </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('auth.signup.confirmPassword')}
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  id="confirmPassword"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 pr-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder={t('auth.signup.confirmPassword')}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
+            {sent && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Enter OTP</label>
+                <input type="text" value={otp} onChange={(e)=>setOtp(e.target.value)} className="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900" placeholder="6-digit code" maxLength={6} />
+                <div className="mt-3 flex items-center justify-between">
+                  <button type="button" onClick={verifyOtp} disabled={loading || !otp.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50">Verify OTP</button>
+                  <button type="button" onClick={createAccount} disabled={!verified} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md disabled:opacity-50">Create Account</button>
+                </div>
               </div>
+            )}
+
+            <div className="pt-6 text-center">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">{t('auth.signup.haveAccount')} <Link to="/login" className="text-purple-600 font-semibold">{t('auth.signup.loginLink')}</Link></p>
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              {loading ? t('auth.signup.loading') : t('auth.signup.signupButton')}
-            </button>
-          </form>
-
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
-              {t('auth.signup.haveAccount')}{' '}
-              <Link
-                to="/login"
-                className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-semibold"
-              >
-                {t('auth.signup.loginLink')}
-              </Link>
-            </p>
           </div>
         </div>
       </div>

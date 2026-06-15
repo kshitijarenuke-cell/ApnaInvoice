@@ -1,36 +1,48 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { API_URL } from '../utils/api';
+import { useAuth } from '../hooks/useAuth';
 
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [sent, setSent] = useState(false);
+  const [pendingToken, setPendingToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useTranslation();
-
-  const successMessage = location.state?.message;
-  const messageType = location.state?.type;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [toast, setToast] = useState('');
+  const { login } = useAuth();
+  const location = useLocation();
+  const successMessage = location.state?.successMessage || '';
+  const messageType = location.state?.messageType || '';
+  const sendOtp = async () => {
+    if (!phone.trim()) return setError(t('auth.login.invalidEmail') || 'Enter phone');
     setError('');
     setLoading(true);
-
     try {
-      const result = await login(email, password);
-      //test comment
-      if (result.success) {
-        navigate('/dashboard');
-      } else {
-        setError(result.error || t('auth.errors.serverError'));
+      const res = await fetch(`${API_URL}/auth/login-phone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 404) setError(t('auth.login.pleaseSignup') || 'Please sign up before logging in');
+        else setError(data.message || t('auth.errors.serverError'));
+        setLoading(false);
+        return;
       }
+      setPendingToken(data.pendingToken);
+      sessionStorage.setItem('pending_token', data.pendingToken);
+      sessionStorage.setItem('pending_masked_phone', data.maskedPhone || '');
+      setSent(true);
+      const msg = `OTP sent to ${data.maskedPhone || phone}`;
+      setToast(msg);
+      setTimeout(() => setToast(''), 3000);
     } catch (err: any) {
       setError(err.message || t('auth.errors.unexpectedError'));
     } finally {
@@ -38,8 +50,39 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!otp.trim() || !(pendingToken || sessionStorage.getItem('pending_token'))) return setError('Enter OTP');
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pendingToken: pendingToken || sessionStorage.getItem('pending_token'), otp: otp.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Verification failed');
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      login(data.token, data.user);
+      navigate('/admin/invoices');
+    } catch (err: any) {
+      setError(err.message || 'Verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+      {toast && (
+        <div className="fixed right-4 top-4 z-50 bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>
+      )}
       <div className="w-full max-w-md">
         {/* Logo and App Name */}
         <div className="text-center mb-8">
@@ -65,7 +108,7 @@ const LoginPage: React.FC = () => {
         {/* Login Card */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-6">
             {/* Success Message */}
             {successMessage && messageType === 'success' && (
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center space-x-2">
@@ -82,63 +125,78 @@ const LoginPage: React.FC = () => {
               </div>
             )}
 
-            {/* Email Field */}
+            {/* Phone Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('auth.login.email')}
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('auth.login.phone') || 'Mobile Number'}
               </label>
               <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="tel"
+                id="phone"
+                value={phone}
+                onChange={(e) => { setPhone(e.target.value); if (!sent) setError(''); }}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                placeholder={t('auth.login.email')}
+                placeholder={t('auth.login.phone') || 'e.g. +919876543210'}
                 required
               />
             </div>
 
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('auth.login.password')}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors pr-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder={t('auth.login.password')}
-                  required
-                />
+            {!sent && (
+              <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  onClick={sendOtp}
+                  disabled={loading}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md disabled:opacity-50"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {loading ? t('auth.login.loading') : 'Send OTP'}
                 </button>
               </div>
-            </div>
+            )}
 
-            <div className="text-right mt-2">
-         <Link
-             to="/forgot-password"
-            className="text-sm text-purple-400 hover:text-purple-300" >
-             {t('auth.login.forgotPassword')}
-         </Link>
-      </div>
+            {sent && (
+              <>
+                <p className="text-sm text-gray-600">OTP sent to {sessionStorage.getItem('pending_masked_phone') || ''}</p>
+                <div>
+                  <label htmlFor="otp" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Enter OTP</label>
+                  <input
+                    id="otp"
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder="6-digit code"
+                    maxLength={6}
+                    required
+                  />
+                </div>
 
-            {/* Sign In Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-lg font-semibold focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              {loading ? t('auth.login.loading') : t('auth.login.loginButton')}
-            </button>
+                <div className="flex items-center justify-between mt-3">
+                  <button
+                    type="submit"
+                    disabled={loading || otp.trim().length === 0}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md disabled:opacity-50"
+                  >
+                    {loading ? t('auth.login.loading') : t('auth.login.loginButton')}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async ()=>{
+                      setLoading(true); setError('');
+                      try{
+                        const res = await fetch(`${API_URL}/auth/resend-otp`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pendingToken: sessionStorage.getItem('pending_token') })});
+                        const d = await res.json(); if(!res.ok) setError(d.message||'Resend failed');
+                      }catch(e:any){ setError(e.message||'Resend failed'); }
+                      setLoading(false);
+                    }}
+                    className="text-sm text-blue-600"
+                  >
+                    Resend
+                  </button>
+                </div>
+              </>
+            )}
           </form>
 
           {/* Sign Up Link */}
