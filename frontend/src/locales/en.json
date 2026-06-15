@@ -9,6 +9,7 @@
     "login": {
       "title": "Login",
       "email": "Email Address",
+      "phone": "Mobile Number",
       "password": "Password",
       "rememberMe": "Remember me",
       "forgotPassword": "Forgot Password?",
@@ -17,7 +18,8 @@
       "signupLink": "Create one",
       "loading": "Logging in...",
       "invalidEmail": "Please enter a valid email",
-      "passwordRequired": "Password is required"
+      "passwordRequired": "Password is required",
+      "pleaseSignup": "Please sign up before logging in"
     },
     "signup": {
       "title": "Create your account",
@@ -44,6 +46,16 @@
       "serverError": "Server error. Please try again",
       "unexpectedError": "An unexpected error occurred"
     }
+  },
+  "otp": {
+    "title": "Verification Code",
+    "sentTo": "A verification code was sent to {{email}}",
+    "sentToPhone": "A verification code was sent to {{phone}}",
+    "placeholder": "Enter 6-digit code",
+    "verify": "Verify",
+    "resend": "Resend code",
+    "noPending": "No pending verification found",
+    "resendFailed": "Failed to resend code"
   },
   "dashboard": {
     "welcome": "Welcome",
