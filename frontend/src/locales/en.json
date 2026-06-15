@@ -10,6 +10,9 @@
       "title": "Login",
       "email": "Email Address",
       "phone": "Mobile Number",
+      "sendOtp": "Send OTP",
+      "verifyFirst": "Please verify OTP first",
+      "noSession": "No session found",
       "password": "Password",
       "rememberMe": "Remember me",
       "forgotPassword": "Forgot Password?",
@@ -53,6 +56,7 @@
     "sentToPhone": "A verification code was sent to {{phone}}",
     "placeholder": "Enter 6-digit code",
     "verify": "Verify",
+    "verified": "Phone verified",
     "resend": "Resend code",
     "noPending": "No pending verification found",
     "resendFailed": "Failed to resend code"

@@ -9,6 +9,7 @@ const LoginPage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [sent, setSent] = useState(false);
+  const [verified, setVerified] = useState(false);
   const [pendingToken, setPendingToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,7 @@ const LoginPage: React.FC = () => {
       sessionStorage.setItem('pending_token', data.pendingToken);
       sessionStorage.setItem('pending_masked_phone', data.maskedPhone || '');
       setSent(true);
-      const msg = `OTP sent to ${data.maskedPhone || phone}`;
+      const msg = t('otp.sentToPhone', { phone: data.maskedPhone || phone });
       setToast(msg);
       setTimeout(() => setToast(''), 3000);
     } catch (err: any) {
@@ -53,8 +54,32 @@ const LoginPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!otp.trim() || !(pendingToken || sessionStorage.getItem('pending_token'))) return setError('Enter OTP');
+    if (!verified) return setError(t('auth.login.verifyFirst') || 'Please verify OTP first');
+    // token/user already stored by verifyOtp; proceed to login via context
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    if (!token) return setError('No session found');
+
     setLoading(true);
+    try {
+      const result = await login(token, user ? JSON.parse(user) : undefined);
+      if (!result.success) {
+        setError(result.error || 'Login failed');
+        return;
+      }
+      // Navigate to dashboard and reload the app so all providers initialize
+      navigate('/admin/invoices');
+      window.location.reload();
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (!otp.trim() || !(pendingToken || sessionStorage.getItem('pending_token'))) return setError(t('otp.placeholder') || 'Enter OTP');
+    setLoading(true); setError('');
     try {
       const res = await fetch(`${API_URL}/auth/verify-otp`, {
         method: 'POST',
@@ -62,20 +87,15 @@ const LoginPage: React.FC = () => {
         body: JSON.stringify({ pendingToken: pendingToken || sessionStorage.getItem('pending_token'), otp: otp.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || 'Verification failed');
-        setLoading(false);
-        return;
-      }
+      if (!res.ok) { setError(data.message || t('auth.errors.unexpectedError') || 'Verification failed'); setLoading(false); return; }
+      // Store token/user and mark verified. Do not auto-redirect; require clicking Login.
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      login(data.token, data.user);
-      navigate('/admin/invoices');
-    } catch (err: any) {
-      setError(err.message || 'Verification failed');
-    } finally {
-      setLoading(false);
-    }
+      setVerified(true);
+      setToast(t('otp.verified') || 'Phone verified');
+      setTimeout(() => setToast(''), 2000);
+    } catch (err:any) { setError(err.message || 'Verification failed'); }
+    finally { setLoading(false); }
   };
 
   return (
@@ -134,7 +154,16 @@ const LoginPage: React.FC = () => {
                 type="tel"
                 id="phone"
                 value={phone}
-                onChange={(e) => { setPhone(e.target.value); if (!sent) setError(''); }}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  if (!sent) setError('');
+                  // reset verification state when phone changes
+                  setVerified(false);
+                  setSent(false);
+                  setPendingToken('');
+                  sessionStorage.removeItem('pending_token');
+                  sessionStorage.removeItem('pending_masked_phone');
+                }}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 placeholder={t('auth.login.phone') || 'e.g. +919876543210'}
                 required
@@ -149,7 +178,7 @@ const LoginPage: React.FC = () => {
                   disabled={loading}
                   className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md disabled:opacity-50"
                 >
-                  {loading ? t('auth.login.loading') : 'Send OTP'}
+                  {loading ? t('auth.login.loading') : t('auth.login.sendOtp')}
                 </button>
               </div>
             )}
@@ -158,27 +187,38 @@ const LoginPage: React.FC = () => {
               <>
                 <p className="text-sm text-gray-600">OTP sent to {sessionStorage.getItem('pending_masked_phone') || ''}</p>
                 <div>
-                  <label htmlFor="otp" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Enter OTP</label>
+                  <label htmlFor="otp" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('otp.title')}</label>
                   <input
                     id="otp"
                     type="text"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    placeholder="6-digit code"
+                      placeholder={t('otp.placeholder')}
                     maxLength={6}
                     required
                   />
                 </div>
 
                 <div className="flex items-center justify-between mt-3">
-                  <button
-                    type="submit"
-                    disabled={loading || otp.trim().length === 0}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md disabled:opacity-50"
-                  >
-                    {loading ? t('auth.login.loading') : t('auth.login.loginButton')}
-                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={verifyOtp}
+                      disabled={loading || otp.trim().length === 0}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50"
+                    >
+                      {loading ? t('auth.login.loading') : t('otp.verify')}
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={!verified || loading}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md disabled:opacity-50"
+                    >
+                      {t('auth.login.loginButton')}
+                    </button>
+                  </div>
 
                   <button
                     type="button"
@@ -192,7 +232,7 @@ const LoginPage: React.FC = () => {
                     }}
                     className="text-sm text-blue-600"
                   >
-                    Resend
+                    {t('otp.resend')}
                   </button>
                 </div>
               </>

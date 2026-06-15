@@ -19,7 +19,8 @@ const SignupPage: React.FC = () => {
   const [toast, setToast] = useState('');
 
   const sendOtp = async () => {
-    if (!phone.trim()) return setError('Enter phone');
+    if (!phone.trim()) return setError(t('auth.login.invalidEmail') || 'Enter phone');
+    if (sent) return; // already sent, avoid duplicate calls
     setError('');
     setLoading(true);
     try {
@@ -38,7 +39,7 @@ const SignupPage: React.FC = () => {
       sessionStorage.setItem('pending_token', data.pendingToken);
       sessionStorage.setItem('pending_masked_phone', data.maskedPhone || '');
       setSent(true);
-      setToast(`OTP sent to ${data.maskedPhone || phone}`);
+      setToast(t('otp.sentToPhone', { phone: data.maskedPhone || phone }));
       setTimeout(() => setToast(''), 3000);
     } catch (e: any) {
       setError(e.message || 'Failed to send OTP');
@@ -48,53 +49,53 @@ const SignupPage: React.FC = () => {
   };
 
   const resendOtp = async () => {
-    if (!sessionStorage.getItem('pending_token')) return setError('No pending request');
+    if (!sessionStorage.getItem('pending_token')) return setError(t('otp.noPending') || 'No pending request');
     setLoading(true); setError('');
     try {
       const res = await fetch(`${API_URL}/auth/resend-otp`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ pendingToken: sessionStorage.getItem('pending_token') }) });
       const d = await res.json();
-      if (!res.ok) { setError(d.message || 'Resend failed'); return; }
-      setToast('OTP resent');
+      if (!res.ok) { setError(d.message || t('otp.resendFailed') || 'Resend failed'); return; }
+      setToast(t('otp.resend') || 'OTP resent');
       setTimeout(() => setToast(''), 3000);
     } catch (e:any) { setError(e.message || 'Resend failed'); }
     finally { setLoading(false); }
   };
 
   const verifyOtp = async () => {
-    if (!otp.trim() || !(pendingToken || sessionStorage.getItem('pending_token'))) return setError('Enter OTP');
+    if (!otp.trim() || !(pendingToken || sessionStorage.getItem('pending_token'))) return setError(t('otp.placeholder') || 'Enter OTP');
     setLoading(true); setError('');
     try {
       const res = await fetch(`${API_URL}/auth/verify-otp`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ pendingToken: pendingToken || sessionStorage.getItem('pending_token'), otp: otp.trim() }) });
       const d = await res.json();
-      if (!res.ok) { setError(d.message || 'Verification failed'); return; }
-      // store token if returned
+      if (!res.ok) { setError(d.message || t('auth.errors.unexpectedError') || 'Verification failed'); return; }
       if (d.token) {
         localStorage.setItem('token', d.token);
         localStorage.setItem('user', JSON.stringify(d.user || {}));
       }
       setVerified(true);
-      setToast('Phone verified');
+      setToast(t('otp.verify') || 'Phone verified');
       setTimeout(() => setToast(''), 3000);
     } catch (e:any) { setError(e.message || 'Verification failed'); }
     finally { setLoading(false); }
   };
 
   const createAccount = async () => {
-    if (!verified) return setError('Please verify phone first');
-    // If verify-otp already returned token/user we can navigate
+    if (!verified) return setError(t('auth.login.pleaseSignup') || 'Please verify phone first');
     setLoading(true); setError('');
     try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        navigate('/admin/invoices');
+      const res = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim() }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setError(d.message || t('auth.signup.signupFailed') || 'Create account failed');
         return;
       }
-      // Fallback: call register endpoint (if backend supports name+phone)
-      const res = await fetch(`${API_URL}/auth/register`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name: name.trim(), phone: phone.trim() }) });
-      const d = await res.json();
-      if (!res.ok) { setError(d.message || 'Create account failed'); return; }
-      if (d.token) { localStorage.setItem('token', d.token); localStorage.setItem('user', JSON.stringify(d.user || {})); }
-      navigate('/admin/invoices');
+      setToast(t('auth.signup.signupSuccess') || 'Account created. Please login.');
+      setTimeout(() => setToast(''), 2500);
+      navigate('/login');
     } catch (e:any) { setError(e.message || 'Create account failed'); }
     finally { setLoading(false); }
   };
@@ -131,21 +132,21 @@ const SignupPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mobile Number</label>
-              <input type="tel" value={phone} onChange={(e)=>setPhone(e.target.value)} onBlur={()=>{ if(phone.trim() && !sent) sendOtp(); }} className="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900" placeholder="e.g. +919876543210" />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.login.phone')}</label>
+              <input type="tel" value={phone} onChange={(e)=>setPhone(e.target.value)} className="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900" placeholder={t('auth.login.phone') || 'e.g. +919876543210'} />
               <div className="mt-2 flex items-center justify-between">
-                <button type="button" onClick={sendOtp} disabled={loading || !phone.trim()} className="text-sm text-blue-600">Verify</button>
-                {sent && <button type="button" onClick={resendOtp} disabled={loading} className="text-sm text-blue-600">Resend OTP</button>}
+                <button type="button" onClick={sendOtp} disabled={loading || !phone.trim() || sent} className="text-sm text-blue-600">{t('auth.login.sendOtp') || 'Verify'}</button>
+                {sent && <button type="button" onClick={resendOtp} disabled={loading} className="text-sm text-blue-600">{t('otp.resend') || 'Resend OTP'}</button>}
               </div>
             </div>
 
             {sent && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Enter OTP</label>
-                <input type="text" value={otp} onChange={(e)=>setOtp(e.target.value)} className="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900" placeholder="6-digit code" maxLength={6} />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('otp.title')}</label>
+                <input type="text" value={otp} onChange={(e)=>setOtp(e.target.value)} className="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900" placeholder={t('otp.placeholder')} maxLength={6} />
                 <div className="mt-3 flex items-center justify-between">
-                  <button type="button" onClick={verifyOtp} disabled={loading || !otp.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50">Verify OTP</button>
-                  <button type="button" onClick={createAccount} disabled={!verified} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md disabled:opacity-50">Create Account</button>
+                  <button type="button" onClick={verifyOtp} disabled={loading || !otp.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50">{t('otp.verify') || 'Verify OTP'}</button>
+                  <button type="button" onClick={createAccount} disabled={!verified} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md disabled:opacity-50">{t('auth.signup.signupButton') || 'Create Account'}</button>
                 </div>
               </div>
             )}
