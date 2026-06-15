@@ -236,7 +236,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (!response.ok || !data.user) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          sessionStorage.removeItem('invoice_role');
           setUser(null);
           setUsers([]);
           return;
@@ -248,18 +247,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(userProfile);
         localStorage.setItem('user', JSON.stringify(userProfile));
 
-        // set invoice role to stored role or default to 'user'
-        const roleToSet = userProfile.role || 'user';
-        sessionStorage.setItem('invoice_role', roleToSet);
-        window.dispatchEvent(new Event('invoiceRoleUpdated'));
-
         // fetch all users for UI (no role-based restriction)
         await fetchAllUsers();
       } catch (error) {
         console.error('Auth init error:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        sessionStorage.removeItem('invoice_role');
         setUser(null);
         setUsers([]);
       } finally {
@@ -300,9 +293,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(userProfile);
       localStorage.setItem('user', JSON.stringify(userProfile));
 
-      const roleToSet2 = userProfile.role || 'user';
-      sessionStorage.setItem('invoice_role', roleToSet2);
-      window.dispatchEvent(new Event('invoiceRoleUpdated'));
       await fetchAllUsers();
 
       return { success: true };
@@ -385,8 +375,6 @@ const signup = async (
     try {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      sessionStorage.removeItem('invoice_role');
-      window.dispatchEvent(new Event('invoiceRoleUpdated'));
       setUser(null);
       setUsers([]);
     } catch (error) {
