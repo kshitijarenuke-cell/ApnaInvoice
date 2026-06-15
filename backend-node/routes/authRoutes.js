@@ -181,7 +181,7 @@ router.post("/register", async (req, res) => {
 router.get("/me", authMiddleware, async (req, res) => {
   try {
     const userResult = await pool.query(
-      `SELECT id, email, name, phone, whatsapp, strong_areas, role, designation, company_name, created_at, updated_at
+      `SELECT id, email, name, phone, whatsapp, strong_areas, role, designation, company_name, signature_url, created_at, updated_at
        FROM user_profiles
        WHERE id = $1`,
       [req.user.id]
@@ -211,7 +211,7 @@ router.get("/me", authMiddleware, async (req, res) => {
 router.put("/profile/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, whatsapp, strong_areas } = req.body;
+    const { name, email, phone, whatsapp, strong_areas, signature_url } = req.body;
 
     if (req.user.id !== id && req.user.role !== "admin") {
       return res.status(403).json({
@@ -238,26 +238,38 @@ router.put("/profile/:id", authMiddleware, async (req, res) => {
         message: "Email already used by another account",
       });
     }
-
-    const updatedUser = await pool.query(
-      `UPDATE user_profiles
-       SET name = $1,
-           email = $2,
-           phone = $3,
-           whatsapp = $4,
-           strong_areas = $5,
-           updated_at = NOW()
-       WHERE id = $6
-       RETURNING id, email, name, phone, whatsapp, strong_areas, role, designation, company_name, created_at, updated_at`,
-      [
-        name,
-        email.trim().toLowerCase(),
-        phone || null,
-        whatsapp || null,
-        strong_areas || null,
-        id,
-      ]
-    );
+const updatedUser = await pool.query(
+  `UPDATE user_profiles
+   SET name = $1,
+       email = $2,
+       phone = $3,
+       whatsapp = $4,
+       strong_areas = $5,
+       signature_url = $6,
+       updated_at = NOW()
+   WHERE id = $7
+   RETURNING id,
+             email,
+             name,
+             phone,
+             whatsapp,
+             strong_areas,
+             role,
+             designation,
+             company_name,
+             signature_url,
+             created_at,
+             updated_at`,
+  [
+    name,
+    email.trim().toLowerCase(),
+    phone || null,
+    whatsapp || null,
+    strong_areas || null,
+    signature_url || null,
+    id,
+  ]
+);
 
     if (updatedUser.rows.length === 0) {
       return res.status(404).json({
@@ -292,8 +304,8 @@ router.get("/users", authMiddleware, async (req, res) => {
 
     const usersResult = await pool.query(
       `SELECT id, email, name, phone, whatsapp, strong_areas, role, designation, company_name, created_at, updated_at
-       FROM user_profiles
-       ORDER BY created_at DESC`
+FROM user_profiles
+ORDER BY created_at DESC`
     );
 
     res.json({
@@ -337,16 +349,16 @@ router.put("/users/:id/role", authMiddleware, async (req, res) => {
         message: "Invalid role",
       });
     }
-
-    const updatedUser = await pool.query(
-      `UPDATE user_profiles
-       SET role = $1,
-           updated_at = NOW()
-       WHERE id = $2
-       RETURNING id, email, name, phone, whatsapp, strong_areas, role, designation, company_name, created_at, updated_at`,
-      [role, id]
-    );
-
+const updatedUser = await pool.query(
+  `UPDATE user_profiles
+   SET role = $1,
+       updated_at = NOW()
+   WHERE id = $2
+   RETURNING id, email, name, phone, whatsapp, strong_areas,
+             role, designation, company_name, created_at, updated_at`,
+  [role, id]
+);
+    
     if (updatedUser.rows.length === 0) {
       return res.status(404).json({
         success: false,
