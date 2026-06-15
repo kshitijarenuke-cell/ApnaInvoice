@@ -277,7 +277,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
     );
 
     if (selectedUser) {
-      console.log('Selected User:', selectedUser);
+      console.log("Selected User:", JSON.stringify(selectedUser, null, 2));
       store.updateBillTo('name', selectedUser.name || '');
       store.updateBillTo('email', selectedUser.email || '');
       store.updateBillTo('phone', selectedUser.phone || '');

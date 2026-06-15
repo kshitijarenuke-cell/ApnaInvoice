@@ -12,6 +12,7 @@ interface InvoiceEditorProps {
 
 const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ onSaved }) => {
   const store = useInvoiceStore();
+  console.log("BillTo State:", store.billTo);
   const { user } = useAuth();
   const { isProvider } = useInvoiceRole();
   const [isSaving, setIsSaving] = useState(false);
@@ -308,13 +309,17 @@ useEffect(() => {
   ))}
 </select>
   
-                <input
-                  type="text"
-                  value={store.billTo.name}
-                  onChange={(e) => store.updateBillTo('name', e.target.value)}
-                  aria-label="Client Name"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                />
+                <div style={{ background: "red", color: "white", padding: "10px" }}>
+  TEST NAME FIELD
+</div>
+
+<input
+  type="text"
+  value={store.billTo.name}
+  onChange={(e) => store.updateBillTo('name', e.target.value)}
+  aria-label="Client Name"
+  style={{ border: "4px solid red", background: "yellow" }}
+/>
               </div>
 
               <div>
