@@ -9,7 +9,7 @@
     "login": {
       "title": "Login",
       "email": "Email Address",
-      "phone": "Mobile Number",
+      "mobileNumber": "Mobile Number",
       "sendOtp": "Send OTP",
       "verifyFirst": "Please verify OTP first",
       "noSession": "No session found",
@@ -22,6 +22,7 @@
       "loading": "Logging in...",
       "invalidEmail": "Please enter a valid email",
       "passwordRequired": "Password is required",
+      "mobileNumberRequired": "Mobile number is required",
       "pleaseSignup": "Please sign up before logging in"
     },
     "signup": {

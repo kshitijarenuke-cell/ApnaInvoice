@@ -148,7 +148,7 @@ const LoginPage: React.FC = () => {
             {/* Phone Field */}
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('auth.login.phone') || 'Mobile Number'}
+                {t('auth.login.mobileNumber') || 'Mobile Number'}
               </label>
               <input
                 type="tel"
@@ -165,7 +165,7 @@ const LoginPage: React.FC = () => {
                   sessionStorage.removeItem('pending_masked_phone');
                 }}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                placeholder={t('auth.login.phone') || 'e.g. +919876543210'}
+                placeholder={t('auth.login.mobileNumber') || 'e.g. +919876543210'}
                 required
               />
             </div>
