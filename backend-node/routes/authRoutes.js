@@ -5,7 +5,7 @@ const pool = require("../db");
 const authMiddleware = require("../middleware/authMiddleware");
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
-const smsService = require('../mailService');
+const smsService = require('../otpService');
 
 const router = express.Router();
 
@@ -39,6 +39,54 @@ router.post('/signup-send-otp', async (req, res) => {
   } catch (err) {
     console.error('signup-send-otp error:', err);
     return res.status(500).json({ success: false, message: 'Failed to send OTP' });
+  }
+});
+
+router.post('/login-phone', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ success: false, message: 'Phone is required' });
+
+    const normPhone = String(phone).trim();
+
+    const userRes = await pool.query('SELECT id, phone, whatsapp FROM user_profiles WHERE phone = $1 OR whatsapp = $1', [normPhone]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = userRes.rows[0];
+    const userPhone = user.phone || user.whatsapp || normPhone;
+
+    const otp = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    const otpHash = await bcrypt.hash(otp, 10);
+    const pendingToken = uuidv4();
+    const expiryMinutes = Number(process.env.OTP_EXPIRY_MIN || 5);
+    const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
+
+    try {
+      await pool.query('DELETE FROM otp_codes WHERE user_id = $1', [user.id]);
+    } catch (delErr) {
+      // not fatal
+      console.warn('Failed to cleanup existing otp rows', delErr && delErr.message ? delErr.message : delErr);
+    }
+
+    await pool.query(
+      'INSERT INTO otp_codes (user_id, otp_hash, pending_token, expires_at) VALUES ($1,$2,$3,$4)',
+      [user.id, otpHash, pendingToken, expiresAt]
+    );
+
+    try {
+      await smsService.sendOtpToPhone(userPhone || process.env.DEV_RECEIVER_PHONE || '+0000000000', otp, { expiryMinutes });
+    } catch (smsErr) {
+      console.error('Error sending OTP SMS:', smsErr && smsErr.message ? smsErr.message : smsErr);
+    }
+
+    const resp = { success: true, pendingToken, maskedPhone: smsService.maskPhone(userPhone) };
+ 
+    return res.json(resp);
+  } catch (error) {
+    console.error('login-phone error:', error && error.message ? error.message : error);
+    return res.status(500).json({ success: false, message: 'Failed to send OTP', error: error.message || String(error) });
   }
 });
 
@@ -111,8 +159,8 @@ router.post('/verify-otp', async (req, res) => {
   } catch (error) {
     console.error('Verify OTP error:', error);
     res.status(500).json({ success: false, message: 'Verification failed', error: error.message });
-  }
-});
+  };
+})
 
 // Resend OTP for a pending token
 router.post('/resend-otp', async (req, res) => {
@@ -231,104 +279,34 @@ router.post("/login", async (req, res) => {
 
 router.post("/register", async (req, res) => {
   try {
-    console.log("REGISTER BODY:", req.body);
-
-    const {
-      email,
-      password,
-      name,
-      phone,
-      whatsapp,
-      strong_areas,
-      strongAreas,
-      signup_code,
-      signupCode,
-      roleCode,
-    } = req.body;
-
-    const finalSignupCode = signup_code || signupCode || roleCode;
-
-    if (!email || !password || !name || !finalSignupCode) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, email, password and signup code are required",
-      });
+    // Signup: accept only name and phone and create a user record (email/password left NULL)
+    const { phone, name } = req.body;
+    if (!phone || !name) {
+      return res.status(400).json({ success: false, message: 'Name and phone are required' });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const normalizedCode = finalSignupCode.trim().toUpperCase();
+    const normPhone = String(phone).trim();
+    const normName = String(name).trim();
 
-    let roleToStore;
-
-    if (normalizedCode === "ADMIN2026") {
-      roleToStore = "admin";
-    } else if (normalizedCode === "USER2026") {
-      roleToStore = "user";
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid signup code",
-      });
+    // Check if phone already registered
+    const existing = await pool.query('SELECT id FROM user_profiles WHERE phone = $1', [normPhone]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ success: false, message: 'Phone already registered' });
     }
 
-    const existingUser = await pool.query(
-      "SELECT id FROM user_profiles WHERE email = $1",
-      [normalizedEmail]
-    );
+    const insertQ = `INSERT INTO user_profiles (name, phone, role, created_at, updated_at)
+                     VALUES ($1,$2,$3,NOW(),NOW())
+                     RETURNING id, email, name, phone, role, created_at, updated_at`;
 
-    if (existingUser.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already registered",
-      });
-    }
+    const userRes = await pool.query(insertQ, [normName, normPhone, 'user']);
+    const newUser = userRes.rows[0];
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const token = jwt.sign({ id: newUser.id, phone: newUser.phone, role: newUser.role }, process.env.JWT_SECRET || 'dev_secret', { expiresIn: '7d' });
 
-    const userResult = await pool.query(
-      `INSERT INTO user_profiles
-       (email, password, name, phone, whatsapp, strong_areas, role, designation, company_name)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       RETURNING id, email, name, phone, whatsapp, strong_areas, role, designation, company_name, created_at, updated_at`,
-      [
-        normalizedEmail,
-        hashedPassword,
-        name,
-        phone || null,
-        whatsapp || null,
-        strong_areas || strongAreas || null,
-        roleToStore,
-        roleToStore === "admin" ? "Admin" : "User",
-        null,
-      ]
-    );
-
-    const newUser = userResult.rows[0];
-
-    const token = jwt.sign(
-      {
-        id: newUser.id,
-        email: newUser.email,
-        role: newUser.role,
-      },
-      process.env.JWT_SECRET || "dev_secret",
-      { expiresIn: "7d" }
-    );
-
-    res.status(201).json({
-      success: true,
-      message: "Registration successful",
-      token,
-      user: newUser,
-    });
+    return res.status(201).json({ success: true, message: 'Registration successful', token, user: newUser });
   } catch (error) {
-    console.error("Register full error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Registration failed",
-      error: error.message || String(error),
-    });
+    console.error('Register error:', error);
+    res.status(500).json({ success: false, message: 'Registration failed', error: error.message || String(error) });
   }
 });
 
@@ -367,12 +345,7 @@ router.put("/profile/:id", authMiddleware, async (req, res) => {
     const { id } = req.params;
     const { name, email, phone, whatsapp, strong_areas } = req.body;
 
-    if (req.user.id !== id && req.user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "You are not allowed to update this profile",
-      });
-    }
+    // Allow authenticated users to update profiles (no role-based restriction)
 
     if (!name || !email) {
       return res.status(400).json({
@@ -437,12 +410,7 @@ router.put("/profile/:id", authMiddleware, async (req, res) => {
 
 router.get("/users", authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== "admin" && req.user.role !== "project_manager") {
-      return res.status(403).json({
-        success: false,
-        message: "Only admin or project manager can view all users",
-      });
-    }
+    // Allow all authenticated users to view all users (no role-based restriction)
 
     const usersResult = await pool.query(
       `SELECT id, email, name, phone, whatsapp, strong_areas, role, designation, company_name, created_at, updated_at
@@ -469,12 +437,7 @@ router.put("/users/:id/role", authMiddleware, async (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    if (req.user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Only admin can update user roles",
-      });
-    }
+    // Allow all authenticated users to update user roles (no role-based restriction)
 
     const allowedRoles = [
       "admin",
@@ -557,9 +520,7 @@ router.get("/users/:id/todos", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (req.user.id !== id && req.user.role !== "admin") {
-      return res.status(403).json({ success: false, message: "Not allowed" });
-    }
+    // Allow authenticated users to fetch todos for any user (no role-based restriction)
 
     const result = await pool.query(
       `SELECT id, title, completed, due_date, created_at
@@ -662,9 +623,7 @@ router.delete("/users/:id/todos/:todoId", authMiddleware, async (req, res) => {
   try {
     const { id, todoId } = req.params;
 
-    if (req.user.id !== id && req.user.role !== "admin") {
-      return res.status(403).json({ success: false, message: "Not allowed" });
-    }
+    // Allow deleting todos for any user (no role-based restriction)
 
     await pool.query(
       `DELETE FROM personal_todos WHERE id = $1 AND user_id = $2`,
@@ -737,12 +696,7 @@ router.delete("/users/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (req.user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Only admin can delete users",
-      });
-    }
+    // Allow all authenticated users to delete users (no role-based restriction)
 
     if (req.user.id === id) {
       return res.status(400).json({
