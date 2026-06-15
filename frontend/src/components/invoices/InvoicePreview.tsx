@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Save, Download, RotateCcw, Upload, Edit, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInvoiceStore } from '../../store/invoiceStore';
@@ -16,12 +16,38 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
   const calculations = store.getCalculations();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const [users, setUsers] = useState<any[]>([]);
   const { isProvider } = useInvoiceRole();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  useEffect(() => {
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
 
+      const response = await fetch(
+        'http://localhost:5001/api/auth/users',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUsers(data.users);
+      }
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    }
+  };
+
+  fetchUsers();
+}, []);
   const editableClass =
     'w-full bg-transparent border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded px-1 py-0.5 outline-none';
 
@@ -160,7 +186,7 @@ Please find the invoice attached.`;
        <div
   ref={invoiceRef}
   id="invoice-preview"
-  className="relative max-w-4xl mx-auto bg-white shadow-2xl w-[210mm] min-h-[297mm]"
+  className="relative max-w-7xl mx-auto bg-white shadow-2xl w-full min-h-[297mm]"
 >
   {isProvider && (
     <button
@@ -172,7 +198,7 @@ Please find the invoice attached.`;
 <span>Edit</span>   
  </button>
   )}
-          <div className="px-12 py-8 flex items-center justify-between bg-[#0B2D5B]">
+          <div className="px-12 py-4 flex items-center justify-between bg-[#0B2D5B]">
             <div className="flex-shrink-0">
               <h1 className="leading-none mb-4 text-[#F2C01A] text-[48px] font-bold tracking-[0.05em]">
                 INVOICE
@@ -262,7 +288,7 @@ Please find the invoice attached.`;
 
           <div className="bg-[#6FE9E8] h-[8px]" />
 
-          <div className="px-12 py-8 grid grid-cols-2 gap-12">
+          <div className="px-8 py-4 grid grid-cols-2 gap-12">
             <div>
               <h3 className="mb-3 uppercase text-[#0B2D5B] text-[14px] font-bold tracking-[0.05em]">
                 Bill To:
@@ -271,15 +297,29 @@ Please find the invoice attached.`;
               <div className="space-y-2 text-sm text-[#101828]">
                 {isEditing ? (
                   <>
-                    <input
-                      type="text"
-                      value={store.billTo.name}
-                      onChange={(e) => store.updateBillTo('name', e.target.value)}
-                      placeholder="User Name"
-                      title="Client name"
-                      aria-label="Client name"
-                      className={`${editableClass} font-semibold text-base text-[#101828]`}
-                    />
+                    <select
+  className={`${editableClass} font-semibold text-base`}
+  onChange={(e) => {
+    const selectedUser = users.find(
+      (u) => u.id === e.target.value
+    );
+
+    if (selectedUser) {
+      console.log("Selected User:", JSON.stringify(selectedUser, null, 2));
+      store.updateBillTo('name', selectedUser.name || '');
+      store.updateBillTo('email', selectedUser.email || '');
+      store.updateBillTo('phone', selectedUser.phone || '');
+    }
+  }}
+>
+  <option value="">Select Existing User</option>
+
+  {users.map((user) => (
+    <option key={user.id} value={user.id}>
+      {user.name} ({user.email})
+    </option>
+  ))}
+</select>
 
                     <textarea
                       value={store.billTo.address}

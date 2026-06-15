@@ -649,20 +649,34 @@ title="Starting counter"
               </div>
             </div>
           ))}
-
           {presets.length === 0 && (
-            <div className="col-span-full text-center py-12">
-              <Settings className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4">No presets yet</p>
-              <button
-                onClick={handleNewPreset}
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all shadow-lg"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Create Your First Preset</span>
-              </button>
-            </div>
-          )}
+  <div className="col-span-full flex justify-center py-16">
+    <div className="w-full max-w-3xl text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-16">
+
+      <Settings className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-6" />
+
+      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+        No Presets Found
+      </h3>
+
+      <p className="text-gray-600 dark:text-gray-400 mb-8">
+        Create invoice presets to quickly generate invoices with your
+        preferred currency, tax rates, numbering pattern, and default settings.
+      </p>
+
+      <button
+        onClick={handleNewPreset}
+        className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl transition-all shadow-lg"
+      >
+        <Plus className="h-5 w-5" />
+        <span>Create Your First Preset</span>
+      </button>
+
+    </div>
+  </div>
+)}
+
+          
         </div>
       )}
     </div>
