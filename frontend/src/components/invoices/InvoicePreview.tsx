@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { Plus, Trash2, Save, Download, RotateCcw, Upload, Edit } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Plus, Trash2, Save, Download, RotateCcw, Upload, Edit, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useInvoiceStore } from '../../store/invoiceStore';
@@ -7,7 +7,6 @@ import { formatCurrency } from '../../utils/currencyFormatter';
 import { generateInvoicePDF } from '../../utils/pdfGenerator';
 import { useAuth } from '../../hooks/useAuth';
 import dayjs from 'dayjs';
-
 interface InvoicePreviewProps {
   onSaved?: () => void;
 }
@@ -22,7 +21,32 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  useEffect(() => {
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
 
+      const response = await fetch(
+        'http://localhost:5001/api/auth/users',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUsers(data.users);
+      }
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    }
+  };
+
+  fetchUsers();
+}, []);
   const editableClass =
     'w-full bg-transparent border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded px-1 py-0.5 outline-none';
 
@@ -96,11 +120,12 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
       setIsDownloading(true);
       toast.loading(t('common.loading'), { id: 'download-pdf' });
 
-      await generateInvoicePDF({
-        invoiceNumber: store.number,
-        clientName: store.billTo.name || 'client',
-        currency: store.currency,
-      });
+  await generateInvoicePDF({
+  invoiceId: '',
+  invoiceNumber: store.number,
+  clientName: store.billTo?.name || 'user',
+  currency: store.currency,
+});
 
       toast.success(t('common.success'), { id: 'download-pdf' });
     } catch (error) {
@@ -110,6 +135,34 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
       setIsDownloading(false);
     }
   };
+
+  const handleShareWhatsApp = async () => {
+  try {
+    const phone = store.billTo.phone || '';
+
+    const digits = phone.replace(/\D/g, '');
+
+    const whatsappNumber =
+      digits.length === 10 ? `91${digits}` : digits;
+
+    const message = `Hello ${store.billTo.name},
+
+Invoice ${store.number} has been generated.
+
+Amount Due: ${formatAmount(calculations.totalDue)}
+
+Please find the invoice attached.`;
+
+    const whatsappUrl = whatsappNumber
+      ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+    window.open(whatsappUrl, '_blank');
+  } catch (error) {
+    console.error(error);
+    toast.error('Failed to open WhatsApp');
+  }
+};
 
   const handleNewInvoice = async () => {
     if (window.confirm(t('invoices.newInvoice'))) {
@@ -125,7 +178,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
        <div
   ref={invoiceRef}
   id="invoice-preview"
-  className="relative max-w-4xl mx-auto bg-white shadow-2xl w-[210mm] min-h-[297mm]"
+  className="relative max-w-7xl mx-auto bg-white shadow-2xl w-full min-h-[297mm]"
 >
   <button
     type="button"
@@ -225,7 +278,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
 
           <div className="bg-[#6FE9E8] h-[8px]" />
 
-          <div className="px-12 py-8 grid grid-cols-2 gap-12">
+          <div className="px-8 py-4 grid grid-cols-2 gap-12">
             <div>
               <h3 className="mb-3 uppercase text-[#0B2D5B] text-[14px] font-bold tracking-[0.05em]">
                 Bill To:
@@ -234,15 +287,29 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
               <div className="space-y-2 text-sm text-[#101828]">
                 {isEditing ? (
                   <>
-                    <input
-                      type="text"
-                      value={store.billTo.name}
-                      onChange={(e) => store.updateBillTo('name', e.target.value)}
-                      placeholder="User Name"
-                      title="Client name"
-                      aria-label="Client name"
-                      className={`${editableClass} font-semibold text-base text-[#101828]`}
-                    />
+                    <select
+  className={`${editableClass} font-semibold text-base`}
+  onChange={(e) => {
+    const selectedUser = users.find(
+      (u) => u.id === e.target.value
+    );
+
+    if (selectedUser) {
+      console.log("Selected User:", JSON.stringify(selectedUser, null, 2));
+      store.updateBillTo('name', selectedUser.name || '');
+      store.updateBillTo('email', selectedUser.email || '');
+      store.updateBillTo('phone', selectedUser.phone || '');
+    }
+  }}
+>
+  <option value="">Select Existing User</option>
+
+  {users.map((user) => (
+    <option key={user.id} value={user.id}>
+      {user.name} ({user.email})
+    </option>
+  ))}
+</select>
 
                     <textarea
                       value={store.billTo.address}

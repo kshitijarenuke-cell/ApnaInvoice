@@ -86,15 +86,13 @@ function getInitialState(defaults?: InvoiceSeedDefaultsConfig): InvoiceState {
       phone: '',
       address: '',
     },
-    lineItems: [
-      {
-        id: Date.now().toString(),
-        name: '',
-        description: '',
-        qty: 1,
-        unitPrice: 0,
-      },
-    ],
+    lineItems: Array.from({ length: 10 }, (_, index) => ({
+  id: `${Date.now()}-${index}`,
+  name: '',
+  description: '',
+  qty: 1,
+  unitPrice: 0,
+})),
     taxRate: defaults?.defaultTaxRate ?? 6,
     discountType: defaults?.defaultDiscountType,
     discountValue: defaults?.defaultDiscountValue ?? 0,

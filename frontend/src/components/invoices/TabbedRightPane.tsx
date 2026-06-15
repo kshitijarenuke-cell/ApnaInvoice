@@ -48,8 +48,12 @@ const TabbedRightPane: React.FC<TabbedRightPaneProps> = ({ refreshTrigger }) => 
 
       <div className="flex-1 overflow-auto">
         {activeTab === 'preview' ? (
-          <InvoicePreview />
-        ) : (
+  <div className="p-6">
+    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+      <InvoicePreview />
+    </div>
+  </div>
+) : (
           <InvoiceRecords refreshTrigger={refreshTrigger} onSwitchToPreview={handleSwitchToPreview} />
         )}
       </div>

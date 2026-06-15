@@ -651,7 +651,6 @@ title="Starting counter"
               </div>
             </div>
           ))}
-
           {presets.length === 0 && (
             <div className="col-span-full text-center py-12">
               <Settings className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />

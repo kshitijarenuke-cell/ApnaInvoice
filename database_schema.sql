@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     COMMENT='Job title/designation (nullable)',
   company_name text,
     COMMENT='Associated company name (nullable)',
+  signature_url text,
+    COMMENT='User signature image URL (nullable)',
+  
   
   -- Audit Timestamps
   created_at timestamptz DEFAULT now(),

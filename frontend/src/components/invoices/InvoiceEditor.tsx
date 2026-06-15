@@ -4,19 +4,70 @@ import { toast } from 'sonner';
 import { useInvoiceStore } from '../../store/invoiceStore';
 import { useAuth } from '../../hooks/useAuth';
 import { getCurrencySymbol, formatCurrency } from '../../utils/currencyFormatter';
-
+const API_URL = 'http://localhost:5001/api';
 interface InvoiceEditorProps {
   onSaved?: () => void;
 }
 
 const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ onSaved }) => {
   const store = useInvoiceStore();
+  console.log("BillTo State:", store.billTo);
   const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+ useEffect(() => {
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
 
+      const response = await fetch(`${API_URL}/auth/users`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUsers(data.users);
+      }
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    }
+  };
+
+  fetchUsers();
+}, []);
  useEffect(() => {
   store.loadFromDraft();
   // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+useEffect(() => {
+  const loadUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(
+        'http://localhost:5001/api/auth/users',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUsers(data.users);
+      }
+    } catch (error) {
+      console.error('Failed to load users', error);
+    }
+  };
+
+  loadUsers();
 }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,13 +281,40 @@ const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ onSaved }) => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   User Name
                 </label>
-                <input
-                  type="text"
-                  value={store.billTo.name}
-                  onChange={(e) => store.updateBillTo('name', e.target.value)}
-                  aria-label="Client Name"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                />
+                <select
+  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-2"
+  onChange={(e) => {
+    const selectedUser = users.find(
+      (u) => u.id === e.target.value
+    );
+
+    if (selectedUser) {
+      store.updateBillTo('name', selectedUser.name || '');
+      store.updateBillTo('email', selectedUser.email || '');
+      store.updateBillTo('phone', selectedUser.phone || '');
+    }
+  }}
+>
+  <option value="">Select Existing User</option>
+
+  {users.map((user) => (
+    <option key={user.id} value={user.id}>
+      {user.name} ({user.email})
+    </option>
+  ))}
+</select>
+  
+                <div style={{ background: "red", color: "white", padding: "10px" }}>
+  TEST NAME FIELD
+</div>
+
+<input
+  type="text"
+  value={store.billTo.name}
+  onChange={(e) => store.updateBillTo('name', e.target.value)}
+  aria-label="Client Name"
+  style={{ border: "4px solid red", background: "yellow" }}
+/>
               </div>
 
               <div>
