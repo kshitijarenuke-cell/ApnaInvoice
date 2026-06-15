@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Save, Download, RotateCcw, Upload, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInvoiceStore } from '../../store/invoiceStore';
@@ -17,12 +17,38 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
   const calculations = store.getCalculations();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const [users, setUsers] = useState<any[]>([]);
   const { isProvider } = useInvoiceRole();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  useEffect(() => {
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
 
+      const response = await fetch(
+        'http://localhost:5001/api/auth/users',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUsers(data.users);
+      }
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    }
+  };
+
+  fetchUsers();
+}, []);
   const editableClass =
     'w-full bg-transparent border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded px-1 py-0.5 outline-none';
 
@@ -243,15 +269,29 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
               <div className="space-y-2 text-sm text-[#101828]">
                 {isEditing ? (
                   <>
-                    <input
-                      type="text"
-                      value={store.billTo.name}
-                      onChange={(e) => store.updateBillTo('name', e.target.value)}
-                      placeholder="User Name"
-                      title="Client name"
-                      aria-label="Client name"
-                      className={`${editableClass} font-semibold text-base text-[#101828]`}
-                    />
+                    <select
+  className={`${editableClass} font-semibold text-base`}
+  onChange={(e) => {
+    const selectedUser = users.find(
+      (u) => u.id === e.target.value
+    );
+
+    if (selectedUser) {
+      console.log('Selected User:', selectedUser);
+      store.updateBillTo('name', selectedUser.name || '');
+      store.updateBillTo('email', selectedUser.email || '');
+      store.updateBillTo('phone', selectedUser.phone || '');
+    }
+  }}
+>
+  <option value="">Select Existing User</option>
+
+  {users.map((user) => (
+    <option key={user.id} value={user.id}>
+      {user.name} ({user.email})
+    </option>
+  ))}
+</select>
 
                     <textarea
                       value={store.billTo.address}
