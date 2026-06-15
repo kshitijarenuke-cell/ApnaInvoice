@@ -35,9 +35,7 @@ const Layout: React.FC = () => {
 
   const menuItems = [
     { label: t('dashboard.invoices'), path: '/admin/invoices', icon: Receipt },
-    ...(user?.role === 'admin'
-      ? [{ label: t('dashboard.invoiceSettings'), path: '/admin/invoices/settings', icon: Settings }]
-      : []),
+    { label: t('dashboard.invoiceSettings'), path: '/admin/invoices/settings', icon: Settings },
   ];
 
   const handleLogout = () => {

@@ -54,7 +54,7 @@ export interface SystemSettings {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (token: string, user?: any) => Promise<{ success: boolean; error?: string }>;
   signup: (
     email: string,
     password: string,
@@ -248,17 +248,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(userProfile);
         localStorage.setItem('user', JSON.stringify(userProfile));
 
-        if (userProfile.role === 'provider' || userProfile.role === 'user') {
-          sessionStorage.setItem('invoice_role', userProfile.role);
-          window.dispatchEvent(new Event('invoiceRoleUpdated'));
-        } else {
-          sessionStorage.removeItem('invoice_role');
-          window.dispatchEvent(new Event('invoiceRoleUpdated'));
-        }
+        // set invoice role to stored role or default to 'user'
+        const roleToSet = userProfile.role || 'user';
+        sessionStorage.setItem('invoice_role', roleToSet);
+        window.dispatchEvent(new Event('invoiceRoleUpdated'));
 
-        if (userProfile.role === 'admin' || userProfile.role === 'project_manager') {
-          await fetchAllUsers();
-        }
+        // fetch all users for UI (no role-based restriction)
+        await fetchAllUsers();
       } catch (error) {
         console.error('Auth init error:', error);
         localStorage.removeItem('token');
@@ -274,60 +270,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = async (
-    email: string,
-    password: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  const login = async (token: string, providedUser?: any): Promise<{ success: boolean; error?: string }> => {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password,
-        }),
-      });
+      if (!token) return { success: false, error: 'Token required' };
 
-      const data = await response.json();
+      localStorage.setItem('token', token);
 
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.message || 'Login failed',
-        };
-      }
+      let userProfile: User | null = null;
 
-      localStorage.setItem('token', data.token);
-
-      const userProfile = mapBackendUser(data.user);
-
-      localStorage.setItem('user', JSON.stringify(userProfile));
-      setUser(userProfile);
-
-      if (userProfile.role === 'provider' || userProfile.role === 'user') {
-        sessionStorage.setItem('invoice_role', userProfile.role);
-        window.dispatchEvent(new Event('invoiceRoleUpdated'));
+      if (providedUser) {
+        userProfile = mapBackendUser(providedUser);
       } else {
-        sessionStorage.removeItem('invoice_role');
-        window.dispatchEvent(new Event('invoiceRoleUpdated'));
+        // fetch user profile using token
+        const resp = await fetch(`${API_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.user) {
+          localStorage.removeItem('token');
+          return { success: false, error: data.message || 'Failed to fetch user' };
+        }
+        userProfile = mapBackendUser(data.user);
       }
 
-      if (userProfile.role === 'admin' || userProfile.role === 'project_manager') {
-        await fetchAllUsers();
-      }
+      if (!userProfile) return { success: false, error: 'Failed to get user profile' };
 
-      return {
-        success: true,
-      };
+      userProfile.personalTodos = await fetchUserTodos(userProfile.id);
+
+      setUser(userProfile);
+      localStorage.setItem('user', JSON.stringify(userProfile));
+
+      const roleToSet2 = userProfile.role || 'user';
+      sessionStorage.setItem('invoice_role', roleToSet2);
+      window.dispatchEvent(new Event('invoiceRoleUpdated'));
+      await fetchAllUsers();
+
+      return { success: true };
     } catch (error: any) {
       console.error('Login error:', error);
-
-      return {
-        success: false,
-        error: error.message || 'Login failed',
-      };
+      localStorage.removeItem('token');
+      return { success: false, error: error.message || 'Login failed' };
     }
   };
 
@@ -531,9 +513,8 @@ const signup = async (
         localStorage.setItem('user', JSON.stringify(updatedUser));
       }
 
-      if (user?.role === 'admin' || user?.role === 'project_manager') {
-        await fetchAllUsers();
-      }
+      // After profile update, refresh the users list for UI consistency
+      await fetchAllUsers();
     } catch (error: any) {
       throw new Error(error.message || 'Failed to update profile');
     }

@@ -12,7 +12,7 @@ const InvoicesPage: React.FC = () => {
 
   // Admin-only page: auto-set provider role for invoice management when none is set
   useEffect(() => {
-    if (!invoiceRole && user?.role === 'admin') {
+    if (!invoiceRole) {
       setInvoiceRole('provider');
     }
   }, [invoiceRole, user?.role, setInvoiceRole]);
