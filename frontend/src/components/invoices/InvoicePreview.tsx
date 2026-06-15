@@ -1,23 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Save, Download, RotateCcw, Upload, Edit, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useInvoiceStore } from '../../store/invoiceStore';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { generateInvoicePDF } from '../../utils/pdfGenerator';
 import { useAuth } from '../../hooks/useAuth';
-import { useInvoiceRole } from '../../contexts/InvoiceRoleContext';
 import dayjs from 'dayjs';
 interface InvoicePreviewProps {
   onSaved?: () => void;
 }
 
 const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
+  const { t } = useTranslation();
   const store = useInvoiceStore();
   const calculations = store.getCalculations();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
-  const [users, setUsers] = useState<any[]>([]);
-  const { isProvider } = useInvoiceRole();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -75,19 +74,12 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
 
   const handleSaveInvoice = async () => {
     if (!user) {
-      toast.error('You must be logged in to save invoices.', { id: 'save-invoice' });
-      return;
-    }
-
-    if (!isProvider) {
-      toast.error('You do not have permission to save invoices. Please login as Provider.', {
-        id: 'save-invoice',
-      });
+      toast.error(t('common.error'), { id: 'save-invoice' });
       return;
     }
 
     if (!store.billTo.name || store.lineItems.length === 0) {
-      toast.error('Please fill client name and add at least one line item.', {
+      toast.error(t('common.error'), {
         id: 'save-invoice',
       });
       return;
@@ -96,12 +88,12 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
     setIsSaving(true);
 
     try {
-      toast.loading('Saving invoice...', { id: 'save-invoice' });
+      toast.loading(t('common.loading'), { id: 'save-invoice' });
 
       const result = await store.saveToDB(user.id);
 
       if (result.success) {
-        toast.success('Invoice saved successfully.', { id: 'save-invoice' });
+        toast.success(t('common.success'), { id: 'save-invoice' });
         setIsEditing(false);
         await store.resetToNew(user.id);
 
@@ -111,13 +103,13 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        toast.error(result.error || 'Failed to save invoice. Please try again.', {
+        toast.error(result.error || t('common.error'), {
           id: 'save-invoice',
         });
       }
     } catch (error) {
       console.error('Error saving invoice:', error);
-      toast.error('Failed to save invoice. Please try again.', { id: 'save-invoice' });
+      toast.error(t('common.error'), { id: 'save-invoice' });
     } finally {
       setIsSaving(false);
     }
@@ -126,7 +118,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
   const handleDownloadPDF = async () => {
     try {
       setIsDownloading(true);
-      toast.loading('Generating PDF...', { id: 'download-pdf' });
+      toast.loading(t('common.loading'), { id: 'download-pdf' });
 
   await generateInvoicePDF({
   invoiceId: '',
@@ -135,10 +127,10 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
   currency: store.currency,
 });
 
-      toast.success('PDF downloaded!', { id: 'download-pdf' });
+      toast.success(t('common.success'), { id: 'download-pdf' });
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Failed to generate PDF. Please try again.', { id: 'download-pdf' });
+      toast.error(t('common.error'), { id: 'download-pdf' });
     } finally {
       setIsDownloading(false);
     }
@@ -173,7 +165,7 @@ Please find the invoice attached.`;
 };
 
   const handleNewInvoice = async () => {
-    if (window.confirm('Create a new invoice? Current unsaved changes will be lost.')) {
+    if (window.confirm(t('invoices.newInvoice'))) {
       await store.resetToNew(user?.id);
       setIsEditing(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -188,17 +180,15 @@ Please find the invoice attached.`;
   id="invoice-preview"
   className="relative max-w-7xl mx-auto bg-white shadow-2xl w-full min-h-[297mm]"
 >
-  {isProvider && (
-    <button
-      type="button"
-      onClick={() => setIsEditing(true)}
-      className="absolute top-4 right-4 z-20 inline-flex items-center space-x-2 px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium shadow"
-    >
-      <Edit className="h-4 w-4" />
-<span>Edit</span>   
- </button>
-  )}
-          <div className="px-12 py-4 flex items-center justify-between bg-[#0B2D5B]">
+  <button
+    type="button"
+    onClick={() => setIsEditing(true)}
+    className="absolute top-4 right-4 z-20 inline-flex items-center space-x-2 px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium shadow"
+  >
+    <Edit className="h-4 w-4" />
+    <span>{t('common.edit')}</span>   
+  </button>
+          <div className="px-12 py-8 flex items-center justify-between bg-[#0B2D5B]">
             <div className="flex-shrink-0">
               <h1 className="leading-none mb-4 text-[#F2C01A] text-[48px] font-bold tracking-[0.05em]">
                 INVOICE
@@ -638,7 +628,7 @@ Please find the invoice attached.`;
             <div className="px-12 py-6 border-t border-[#E5E7EB] flex justify-end">
               <label className="inline-flex items-center space-x-2 px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm cursor-pointer hover:bg-gray-200">
                 <Upload className="h-4 w-4" />
-                <span>Upload Signature</span>
+                <span>{t('invoices.uploadSignature')}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -654,48 +644,36 @@ Please find the invoice attached.`;
           </div>
         </div>
 
-        {isProvider && (
-             <div className="max-w-4xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-4 gap-3 ">
+        <div className="max-w-4xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 ">
+          <button
+            type="button"
+            onClick={handleSaveInvoice}
+            disabled={isSaving}
+            className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium"
+          >
+            <Save className="h-4 w-4" />
+            <span>{isSaving ? t('invoices.saving') : t('invoices.saveInvoice')}</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={handleSaveInvoice}
-              disabled={isSaving}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium"
-            >
-              <Save className="h-4 w-4" />
-              <span>{isSaving ? 'Saving...' : 'Save Invoice'}</span>
-            </button>
+          <button
+            type="button"
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
+            className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium"
+          >
+            <Download className="h-4 w-4" />
+            <span>{isDownloading ? t('invoices.downloadingPDF') : t('invoices.downloadPDF')}</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={handleDownloadPDF}
-              disabled={isDownloading}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium"
-            >
-              <Download className="h-4 w-4" />
-              <span>{isDownloading ? 'Downloading...' : 'Download PDF'}</span>
-            </button>
-
-<button
-  type="button"
-  onClick={handleShareWhatsApp}
-  className="flex items-center justify-center space-x-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium"
->
-  <MessageCircle className="h-4 w-4" />
-  <span>Share WhatsApp</span>
-</button>
-
-            <button
-              type="button"
-              onClick={handleNewInvoice}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-medium"
-            >
-              <RotateCcw className="h-4 w-4" />
-              <span>New Invoice</span>
-            </button>
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={handleNewInvoice}
+            className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-medium"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span>{t('invoices.newInvoice')}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

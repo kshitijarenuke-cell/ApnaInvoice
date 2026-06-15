@@ -9,8 +9,8 @@ import {
   Mail,
   Lock,
 } from 'lucide-react';
+import { API_URL } from '../utils/api';
 
-const API_URL = 'http://localhost:5001/api';
 
 const ForgotPasswordPage: React.FC = () => {
   const [step, setStep] = useState<'email' | 'reset'>('email');

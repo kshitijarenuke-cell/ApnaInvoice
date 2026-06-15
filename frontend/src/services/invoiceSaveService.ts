@@ -7,16 +7,10 @@ export interface SaveInvoiceResult {
   error?: string;
 }
 
-const API_URL = 'http://localhost:5001/api';
+import { API_URL } from '../utils/api';
 
 function getToken() {
   return localStorage.getItem('token');
-}
-
-// Helper function to check invoice role from sessionStorage
-function getInvoiceRole(): 'provider' | 'user' | null {
-  const saved = sessionStorage.getItem('invoice_role');
-  return saved === 'provider' || saved === 'user' ? saved : null;
 }
 
 export async function saveInvoice(
@@ -31,16 +25,7 @@ export async function saveInvoice(
     };
   }
 
-  const invoiceRole = getInvoiceRole();
-
-  if (invoiceRole !== 'provider') {
-    return {
-      invoiceId: '',
-      success: false,
-      error:
-        'You do not have permission to create or edit invoices. Please login as Provider to manage invoices.',
-    };
-  }
+  // Allow all authenticated users to create/edit invoices. Invoice role gating removed.
 
   try {
     const calculations = calculateInvoiceTotals(

@@ -15,7 +15,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
   }
 
   if (requiredRole && !requiredRole.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+    // Role-based checks removed: allow authenticated users access to all routes
+    // (kept for backward-compatibility; previously would redirect)
   }
 
   return <>{children}</>;

@@ -27,5 +27,9 @@
     "supabase"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "i18next": "^26.3.1",
+    "react-i18next": "^17.0.8"
+  }
 }

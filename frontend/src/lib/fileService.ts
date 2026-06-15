@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5001/api';
+import { API_URL } from '../utils/api';
 
 function getToken() {
   return localStorage.getItem('token');
@@ -94,11 +94,9 @@ export const uploadFile = async (file: File, bucket: string, path: string) => {
 export const getFileUrl = (_bucket: string, path: string) => {
   if (!path) return '';
 
-  if (path.startsWith('http')) {
-    return path;
-  }
+  if (path.startsWith('http')) return path;
 
-  return `http://localhost:5001${path}`;
+  return `${API_URL.replace(/\/api$/, '')}${path}`;
 };
 
 export const deleteFile = async (_bucket: string, path: string) => {
