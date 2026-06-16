@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Save, Download, RotateCcw, Upload, Edit, MessageCircle } from 'lucide-react';
+import { Plus, Trash2, Save, Download, RotateCcw, Upload, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useInvoiceStore } from '../../store/invoiceStore';
@@ -10,15 +10,14 @@ import dayjs from 'dayjs';
 interface InvoicePreviewProps {
   onSaved?: () => void;
 }
-
 const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
   const { t } = useTranslation();
   const store = useInvoiceStore();
   const calculations = store.getCalculations();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
-
-  const [isEditing, setIsEditing] = useState(false);
+const [users, setUsers] = useState<any[]>([]);
+const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   useEffect(() => {
@@ -287,29 +286,29 @@ Please find the invoice attached.`;
               <div className="space-y-2 text-sm text-[#101828]">
                 {isEditing ? (
                   <>
-                    <select
+<select
+  value=""
   className={`${editableClass} font-semibold text-base`}
-  onChange={(e) => {
+  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedUser = users.find(
-      (u) => u.id === e.target.value
+      (u: any) => String(u.id) === String(e.target.value)
     );
 
-    if (selectedUser) {
-      console.log("Selected User:", JSON.stringify(selectedUser, null, 2));
-      store.updateBillTo('name', selectedUser.name || '');
-      store.updateBillTo('email', selectedUser.email || '');
-      store.updateBillTo('phone', selectedUser.phone || '');
-    }
+    if (!selectedUser) return;
+
+    store.updateBillTo('name', selectedUser.name || '');
+    store.updateBillTo('email', selectedUser.email || '');
+    store.updateBillTo('phone', selectedUser.phone || '');
   }}
 >
   <option value="">Select Existing User</option>
 
-  {users.map((user) => (
+  {users.map((user: any) => (
     <option key={user.id} value={user.id}>
       {user.name} ({user.email})
     </option>
   ))}
-</select>
+</select>                   
 
                     <textarea
                       value={store.billTo.address}

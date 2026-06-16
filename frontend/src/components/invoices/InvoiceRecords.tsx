@@ -471,7 +471,7 @@ const handleShareWhatsApp = async (invoice: InvoiceListItem) => {
                            onClick={() => handleShareWhatsApp(invoice)}
                            disabled={processingId === invoice.id}
                  className="inline-flex items-center space-x-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                         < MessageCircle className="h-3 w-3" />
+                         <MessageCircle className="h-3 w-3" />
                           <span>WhatsApp</span>
                           </button>
 
