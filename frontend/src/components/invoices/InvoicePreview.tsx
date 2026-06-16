@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Save, Download, RotateCcw, Upload, Edit } from 'lucide-react';
+import { Plus, Trash2, Save, Download, RotateCcw, Upload, Edit, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInvoiceStore } from '../../store/invoiceStore';
 import { formatCurrency } from '../../utils/currencyFormatter';
@@ -7,7 +7,6 @@ import { generateInvoicePDF } from '../../utils/pdfGenerator';
 import { useAuth } from '../../hooks/useAuth';
 import { useInvoiceRole } from '../../contexts/InvoiceRoleContext';
 import dayjs from 'dayjs';
-
 interface InvoicePreviewProps {
   onSaved?: () => void;
 }
@@ -129,11 +128,12 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
       setIsDownloading(true);
       toast.loading('Generating PDF...', { id: 'download-pdf' });
 
-      await generateInvoicePDF({
-        invoiceNumber: store.number,
-        clientName: store.billTo.name || 'client',
-        currency: store.currency,
-      });
+  await generateInvoicePDF({
+  invoiceId: '',
+  invoiceNumber: store.number,
+  clientName: store.billTo?.name || 'user',
+  currency: store.currency,
+});
 
       toast.success('PDF downloaded!', { id: 'download-pdf' });
     } catch (error) {
@@ -143,6 +143,34 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
       setIsDownloading(false);
     }
   };
+
+  const handleShareWhatsApp = async () => {
+  try {
+    const phone = store.billTo.phone || '';
+
+    const digits = phone.replace(/\D/g, '');
+
+    const whatsappNumber =
+      digits.length === 10 ? `91${digits}` : digits;
+
+    const message = `Hello ${store.billTo.name},
+
+Invoice ${store.number} has been generated.
+
+Amount Due: ${formatAmount(calculations.totalDue)}
+
+Please find the invoice attached.`;
+
+    const whatsappUrl = whatsappNumber
+      ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+    window.open(whatsappUrl, '_blank');
+  } catch (error) {
+    console.error(error);
+    toast.error('Failed to open WhatsApp');
+  }
+};
 
   const handleNewInvoice = async () => {
     if (window.confirm('Create a new invoice? Current unsaved changes will be lost.')) {
@@ -627,7 +655,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
         </div>
 
         {isProvider && (
-          <div className="max-w-4xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 ">
+             <div className="max-w-4xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-4 gap-3 ">
 
             <button
               type="button"
@@ -648,6 +676,15 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
               <Download className="h-4 w-4" />
               <span>{isDownloading ? 'Downloading...' : 'Download PDF'}</span>
             </button>
+
+<button
+  type="button"
+  onClick={handleShareWhatsApp}
+  className="flex items-center justify-center space-x-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium"
+>
+  <MessageCircle className="h-4 w-4" />
+  <span>Share WhatsApp</span>
+</button>
 
             <button
               type="button"

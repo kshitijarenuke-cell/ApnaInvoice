@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Eye, Download, Edit, Trash2 } from 'lucide-react';
+import { Eye, Download, Edit, Trash2, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -29,6 +29,9 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+const [searchInvoiceNumber, setSearchInvoiceNumber] = useState('');
+const [searchClientName, setSearchClientName] = useState('');
+const [searchDate, setSearchDate] = useState('');
 
   const loadInvoices = async () => {
     if (!user) return;
@@ -61,6 +64,28 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
   const formatDate = (dateString: string) => {
     return dayjs(dateString).format('MM/DD/YYYY');
   };
+
+const filteredInvoices = invoices.filter((invoice) => {
+  const invoiceNumberMatch = invoice.number
+    ?.toLowerCase()
+    .includes(searchInvoiceNumber.toLowerCase());
+
+  const clientNameMatch = invoice.bill_to_name
+    ?.toLowerCase()
+    .includes(searchClientName.toLowerCase());
+
+  const dateMatch = searchDate
+    ? dayjs(invoice.issue_date).format('YYYY-MM-DD') === searchDate
+    : true;
+
+  return invoiceNumberMatch && clientNameMatch && dateMatch;
+});
+
+const clearFilters = () => {
+  setSearchInvoiceNumber('');
+  setSearchClientName('');
+  setSearchDate('');
+};
 
   const handleOpenInvoice = async (invoice: InvoiceListItem) => {
     if (!user) return;
@@ -143,11 +168,12 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
 
       await new Promise((resolve) => setTimeout(resolve, 1200));
 
-      await generateInvoicePDF({
-        invoiceNumber: fullInvoice.number,
-        clientName: fullInvoice.bill_to_name || 'client',
-        currency: fullInvoice.currency,
-      });
+await generateInvoicePDF({
+  invoiceId: invoice.id,
+  invoiceNumber: invoice.number,
+  clientName: invoice.bill_to_name || 'user',
+  currency: invoice.currency,
+});
 
       toast.success('PDF downloaded!', { id: 'download-pdf' });
     } catch (err) {
@@ -157,6 +183,74 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
       setProcessingId(null);
     }
   };
+
+  const formatWhatsAppPhone = (phone: string) => {
+  const digits = phone.replace(/\D/g, '');
+
+  if (!digits) return '';
+
+  if (digits.length === 10) {
+    return `91${digits}`;
+  }
+
+  return digits;
+};
+
+const handleShareWhatsApp = async (invoice: InvoiceListItem) => {
+  if (!user) return;
+
+  setProcessingId(invoice.id);
+
+  try {
+    toast.loading('Preparing WhatsApp share...', { id: 'share-whatsapp' });
+
+    const invoiceRole = sessionStorage.getItem('invoice_role');
+
+    const fullInvoice = await fetchInvoiceById(
+      invoice.id,
+      user.id,
+      user.email,
+      invoiceRole === 'user' ? 'user' : undefined
+    );
+
+    loadInvoice(fullInvoice);
+
+    if (onSwitchToPreview) {
+      onSwitchToPreview();
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    await generateInvoicePDF({
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      clientName: invoice.bill_to_name || 'user',
+      currency: invoice.currency,
+    });
+
+    const phone = formatWhatsAppPhone(fullInvoice.bill_to_phone || '');
+
+    const message = `Hello ${fullInvoice.bill_to_name || 'Customer'}, your invoice ${fullInvoice.number} has been generated. Amount due: ${formatCurrency(
+      Number(fullInvoice.total_due || 0),
+      fullInvoice.currency as any
+    )}. The PDF has been downloaded. Please check the attached invoice PDF.`;
+
+    const whatsappUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+    window.open(whatsappUrl, '_blank');
+
+    toast.success('WhatsApp opened. Attach the downloaded PDF manually.', {
+      id: 'share-whatsapp',
+    });
+  } catch (err) {
+    console.error('Error sharing invoice on WhatsApp:', err);
+    toast.error('Failed to share on WhatsApp.', { id: 'share-whatsapp' });
+  } finally {
+    setProcessingId(null);
+  }
+};
 
   const handleDeleteInvoice = async (invoice: InvoiceListItem) => {
     if (!window.confirm(`Delete invoice ${invoice.number}?`)) return;
@@ -220,6 +314,62 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
   return (
     <div className="overflow-y-auto bg-gray-50 dark:bg-gray-900 min-h-[600px]">
       <div className="p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
+  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div>
+      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+        Search Invoice Number
+      </label>
+      <input
+        type="text"
+        value={searchInvoiceNumber}
+        onChange={(e) => setSearchInvoiceNumber(e.target.value)}
+        placeholder="e.g. INV-001"
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+      />
+    </div>
+
+    <div>
+      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+        Search Client Name
+      </label>
+      <input
+        type="text"
+        value={searchClientName}
+        onChange={(e) => setSearchClientName(e.target.value)}
+        placeholder="e.g. Rahul"
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+      />
+    </div>
+
+    <div>
+  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+    Search by Date
+  </label>
+  {React.createElement('input', {
+    type: 'date',
+    value: searchDate,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+      setSearchDate(e.target.value),
+    className:
+      'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none',
+  })}
+</div>
+
+    <div className="flex items-end">
+      <button
+        onClick={clearFilters}
+        className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+      >
+        Clear Filters
+      </button>
+    </div>
+  </div>
+
+  <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+    Showing {filteredInvoices.length} of {invoices.length} invoices
+  </div>
+</div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -250,7 +400,19 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
               </thead>
 
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {invoices.map((invoice) => (
+               
+               {filteredInvoices.length === 0 && (
+  <tr>
+    <td
+      colSpan={7}
+      className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
+    >
+      No invoices match your search filters.
+    </td>
+  </tr>
+)}
+               
+                {filteredInvoices.map((invoice) => (
                   <tr
                     key={invoice.id}
                     className="group hover:bg-gray-50 dark:hover:bg-gray-700/50"
@@ -310,6 +472,14 @@ const InvoiceRecords: React.FC<InvoiceRecordsProps> = ({
                           <Download className="h-3 w-3" />
                           <span>PDF</span>
                         </button>
+
+                        <button
+                           onClick={() => handleShareWhatsApp(invoice)}
+                           disabled={processingId === invoice.id}
+                 className="inline-flex items-center space-x-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                         < MessageCircle className="h-3 w-3" />
+                          <span>WhatsApp</span>
+                          </button>
 
                         <button
                           onClick={() => handleEditInvoice(invoice)}
