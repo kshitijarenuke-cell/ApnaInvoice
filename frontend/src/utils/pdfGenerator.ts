@@ -9,20 +9,21 @@ interface GeneratePDFOptions {
 }
 
 async function loadImageAsBase64(url: string): Promise<string> {
+  if (url.startsWith('data:') || url.startsWith('blob:')) {
+    return url;
+  }
+
+  const response = await fetch(url);
+  const blob = await response.blob();
+
   return new Promise((resolve, reject) => {
-    fetch(url)
-      .then((response) => response.blob())
-      .then((blob) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          resolve(reader.result as string);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      })
-      .catch(reject);
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
 }
+
 
 export async function generateInvoicePDF(options: GeneratePDFOptions): Promise<void> {
 const { invoiceId, invoiceNumber, clientName, currency } = options;
@@ -35,23 +36,25 @@ const token = localStorage.getItem('token');
 
   // Convert all images to base64
   const images = invoiceElement.querySelectorAll('img');
-  await Promise.all(
-    Array.from(images).map(async (img) => {
-      if (img instanceof HTMLImageElement) {
-        try {
-          let imgUrl = img.src;
-          if (!imgUrl.startsWith('http')) {
-            imgUrl = `${window.location.origin}${imgUrl}`;
-          }
-          const base64 = await loadImageAsBase64(imgUrl);
-          img.src = base64;
-        } catch (error) {
-          console.error('Failed to load image:', img.src, error);
-        }
+await Promise.all(
+  Array.from(images).map(async (img) => {
+    if (!(img instanceof HTMLImageElement)) return;
+    try {
+      let imgUrl = img.getAttribute('src') || '';
+      if (!imgUrl) return;
+      if (imgUrl.startsWith('data:') || imgUrl.startsWith('blob:')) {
+        return;
       }
-    })
-  );
-
+      if (imgUrl.startsWith('/')) {
+        imgUrl = `${window.location.origin}${imgUrl}`;
+      }
+      const base64 = await loadImageAsBase64(imgUrl);
+      img.src = base64;
+    } catch (error) {
+      console.error('Failed to load image:', img.src, error);
+    }
+  })
+);
   // Use html2canvas to capture the invoice as an image
   const canvas = await html2canvas(invoiceElement, {
     scale: 2,

@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationContext';
+import { useTranslation } from 'react-i18next';
 
 interface NotificationPanelProps {
   onClose: () => void;
@@ -8,7 +9,7 @@ interface NotificationPanelProps {
 
 const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
   const { notifications, markAsRead, clearAll } = useNotifications();
-
+  const { t } = useTranslation();
   const getIcon = (type: string) => {
     switch (type) {
       case 'success': return <CheckCircle className="h-5 w-5 text-green-500" />;
@@ -36,14 +37,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
     <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border z-50">
       <div className="p-4 border-b">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
+          <h3 className="text-lg font-medium text-gray-900">{t('dashboard.notifications')}</h3>
           <div className="flex items-center space-x-2">
             {notifications.length > 0 && (
               <button
                 onClick={clearAll}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Clear all
+                {t('common.clearAll')}  
               </button>
             )}
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close" title="Close">
@@ -56,7 +57,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
       <div className="max-h-96 overflow-y-auto">
         {notifications.length === 0 ? (
           <div className="p-4 text-center text-gray-500">
-            No notifications yet
+            {t('common.noNotifications')}
           </div>
         ) : (
           notifications.map((notification) => (
