@@ -7,6 +7,7 @@ import { generateInvoicePDF } from '../../utils/pdfGenerator';
 import { useAuth } from '../../hooks/useAuth';
 import { useInvoiceRole } from '../../contexts/InvoiceRoleContext';
 import dayjs from 'dayjs';
+import { fetchUserInvoices } from '../../services/invoiceListService';
 interface InvoicePreviewProps {
   onSaved?: () => void;
 }
@@ -17,6 +18,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
+  const [previousInvoices, setPreviousInvoices] = useState<any[]>([]);
   const { isProvider } = useInvoiceRole();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -48,6 +50,29 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ onSaved }) => {
 
   fetchUsers();
 }, []);
+useEffect(() => {
+  const loadPreviousInvoices = async () => {
+    try {
+      if (!user) return;
+
+
+
+      const invoices = await fetchUserInvoices(
+        user.id,
+        user.email,
+        user.role
+      );
+
+      
+
+      setPreviousInvoices(invoices);
+    } catch (err) {
+      console.error('Failed to load invoice history:', err);
+    }
+  };
+
+  loadPreviousInvoices();
+}, [user]);
   const editableClass =
     'w-full bg-transparent border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded px-1 py-0.5 outline-none';
 
@@ -300,25 +325,27 @@ Please find the invoice attached.`;
                     <select
   className={`${editableClass} font-semibold text-base`}
   onChange={(e) => {
-    const selectedUser = users.find(
-      (u) => u.id === e.target.value
-    );
+    const selectedInvoice = previousInvoices.find(
+  (inv) => inv.id === e.target.value
+);
 
-    if (selectedUser) {
-      console.log("Selected User:", JSON.stringify(selectedUser, null, 2));
-      store.updateBillTo('name', selectedUser.name || '');
-      store.updateBillTo('email', selectedUser.email || '');
-      store.updateBillTo('phone', selectedUser.phone || '');
-    }
+if (selectedInvoice) {
+  
+
+  store.updateBillTo('name', selectedInvoice.bill_to_name || '');
+  store.updateBillTo('email', selectedInvoice.bill_to_email || '');
+  store.updateBillTo('phone', selectedInvoice.bill_to_phone || '');
+  store.updateBillTo('address', selectedInvoice.bill_to_address || '');
+}
   }}
 >
   <option value="">Select Existing User</option>
-
-  {users.map((user) => (
-    <option key={user.id} value={user.id}>
-      {user.name} ({user.email})
-    </option>
-  ))}
+{previousInvoices.map((invoice) => (
+  <option key={invoice.id} value={invoice.id}>
+    {invoice.bill_to_name} - {invoice.number}
+  </option>
+))}
+  
 </select>
 
                     <textarea

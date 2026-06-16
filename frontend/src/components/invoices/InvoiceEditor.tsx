@@ -5,6 +5,7 @@ import { useInvoiceStore } from '../../store/invoiceStore';
 import { useAuth } from '../../hooks/useAuth';
 import { useInvoiceRole } from '../../contexts/InvoiceRoleContext';
 import { getCurrencySymbol, formatCurrency } from '../../utils/currencyFormatter';
+import { fetchUserInvoices } from '../../services/invoiceListService';
 const API_URL = 'http://localhost:5001/api';
 interface InvoiceEditorProps {
   onSaved?: () => void;
@@ -12,11 +13,13 @@ interface InvoiceEditorProps {
 
 const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ onSaved }) => {
   const store = useInvoiceStore();
-  console.log("BillTo State:", store.billTo);
+  throw new Error("TEST ERROR");
+  
   const { user } = useAuth();
   const { isProvider } = useInvoiceRole();
   const [isSaving, setIsSaving] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
+  const [previousInvoices, setPreviousInvoices] = useState<any[]>([]);
  useEffect(() => {
   const fetchUsers = async () => {
     try {
@@ -71,7 +74,26 @@ useEffect(() => {
 
   loadUsers();
 }, []);
+useEffect(() => {
+  const loadPreviousInvoices = async () => {
+    try {
+      if (!user) return;
+   
+      const invoices = await fetchUserInvoices(
+        user.id,
+        user.email,
+        user.role
+      );
 
+      setPreviousInvoices(invoices);
+      
+    } catch (error) {
+      console.error('Failed to load invoice history:', error);
+    }
+  };
+
+  loadPreviousInvoices();
+}, [user]);   
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -309,9 +331,7 @@ useEffect(() => {
   ))}
 </select>
   
-                <div style={{ background: "red", color: "white", padding: "10px" }}>
-  TEST NAME FIELD
-</div>
+               
 
 <input
   type="text"
@@ -320,6 +340,7 @@ useEffect(() => {
   aria-label="Client Name"
   style={{ border: "4px solid red", background: "yellow" }}
 />
+
               </div>
 
               <div>
