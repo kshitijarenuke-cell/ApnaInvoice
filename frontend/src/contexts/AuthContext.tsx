@@ -20,6 +20,7 @@ export interface User {
   role: UserRole;
   designation?: string;
   companyName?: string;
+  signature_url?: string;
 
   projectName?: string;
   projectDescription?: string;
@@ -161,6 +162,7 @@ function mapBackendUser(dataUser: any): User {
     role: dataUser.role || 'user',
     designation: dataUser.designation || '',
     companyName: dataUser.company_name || '',
+    signature_url: dataUser.signature_url || '',
     projectName: dataUser.project_name,
     projectDescription: dataUser.project_description,
     projectStartDate: dataUser.project_start_date,
